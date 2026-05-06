@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
+import '../core/enums/nivel_ext.dart';
 
 class GameHud extends StatelessWidget {
   final GameState state;
@@ -8,14 +9,18 @@ class GameHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 AGORA VEM DO ESTADO REAL DO JOGO
+    final nivel = state.nivel;
+
     return Card(
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🏆 FASE
+            // =========================
+            // FASE
+            // =========================
             Text(
               "🏆 Fase ${state.fase}",
               style: const TextStyle(
@@ -26,29 +31,42 @@ class GameHud extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // 📊 PERGUNTAS (0 → 10 corrigido para 1 → 10 visual)
-            Text(
-              "📘 Pergunta: ${state.perguntaAtual + 1}/10",
-              style: const TextStyle(fontSize: 16),
-            ),
+            // =========================
+            // PROGRESSO
+            // =========================
+            Text("📘 Pergunta: ${state.perguntaAtual + 1}/10"),
+            Text("✅ Acertos: ${state.acertos}"),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
-            // ✅ ACERTOS
-            Text(
-              "✅ Acertos: ${state.acertos}",
-              style: const TextStyle(fontSize: 16),
-            ),
-
-            const SizedBox(height: 4),
-
-            // 🎯 PONTOS
+            // =========================
+            // PONTOS
+            // =========================
             Text(
               "🎯 Pontos: ${state.pontos}",
               style: const TextStyle(
                 fontSize: 18,
                 color: Colors.green,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // =========================
+            // 🔥 NÍVEL E SÉRIE
+            // =========================
+            const Divider(),
+
+            Text(
+              "🥇 Nível: ${nivel.nome}",
+              style: const TextStyle(fontSize: 16),
+            ),
+            Text(
+              "🎓 Série: ${nivel.serie}",
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
               ),
             ),
           ],

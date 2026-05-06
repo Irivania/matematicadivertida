@@ -21,27 +21,17 @@ class _JogoScreenState extends State<JogoScreen> {
   Pergunta? perguntaAtual;
 
   final respostaController = TextEditingController();
-  final inputFocus = FocusNode();
-  final keyboardFocus = FocusNode();
 
   Timer? timer;
   int tempoRestante = 60;
 
   bool jogoAtivo = false;
-  String mensagem = "Pressione ENTER ou clique em INICIAR";
-
-  @override
-  void initState() {
-    super.initState();
-    keyboardFocus.requestFocus();
-  }
+  String mensagem = "Clique em INICIAR ou pressione ENTER";
 
   @override
   void dispose() {
     timer?.cancel();
     respostaController.dispose();
-    inputFocus.dispose();
-    keyboardFocus.dispose();
     super.dispose();
   }
 
@@ -59,10 +49,6 @@ class _JogoScreenState extends State<JogoScreen> {
 
     gerarPergunta();
     iniciarTimer();
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      inputFocus.requestFocus();
-    });
   }
 
   void iniciarTimer() {
@@ -83,7 +69,7 @@ class _JogoScreenState extends State<JogoScreen> {
   }
 
   // =========================
-  // PARAR JOGO
+  // PARAR
   // =========================
   void pararJogo(String msg) {
     timer?.cancel();
@@ -92,13 +78,10 @@ class _JogoScreenState extends State<JogoScreen> {
       jogoAtivo = false;
       mensagem = msg;
     });
-
-    FocusScope.of(context).unfocus();
-    keyboardFocus.requestFocus();
   }
 
   // =========================
-  // PERGUNTA
+  // GERAR PERGUNTA
   // =========================
   void gerarPergunta() {
     final p = service.gerarSimples();
@@ -106,10 +89,6 @@ class _JogoScreenState extends State<JogoScreen> {
     setState(() {
       perguntaAtual = p;
       respostaController.clear();
-    });
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      inputFocus.requestFocus();
     });
   }
 
@@ -123,34 +102,32 @@ class _JogoScreenState extends State<JogoScreen> {
     if (resp.isEmpty) return;
 
     final correto = resp == perguntaAtual!.resposta;
+    final resultado = controller.responder(correto);
 
     // ❌ ERRO
     if (!correto) {
+      controller.erro();
+
       pararJogo(
         "❌ Errou!\n"
         "Resposta correta: ${perguntaAtual!.resposta}\n\n"
-        "Fase reiniciada\nPressione ENTER",
+        "Fase reiniciada",
       );
 
-      controller.reiniciarFase();
       perguntaAtual = null;
       tempoRestante = 60;
       return;
     }
 
-    // ✅ ACERTO
-    final terminou = controller.responder(true);
-
-    // 🎯 FINAL DA FASE
-    if (terminou) {
+    // 🎉 FASE COMPLETA
+    if (resultado == ResultadoResposta.faseCompleta) {
       final faseAtual = controller.state.fase;
 
       pararJogo(
         "🏆 FASE $faseAtual CONCLUÍDA!\n\n"
         "Você mandou muito bem! 💪\n"
         "Prepare-se para a fase ${faseAtual + 1} 🔥\n\n"
-        "Pontuação: ${controller.state.pontos}\n\n"
-        "Pressione ENTER para continuar",
+        "Pontuação: ${controller.state.pontos}",
       );
 
       controller.proximaFase();
@@ -160,6 +137,7 @@ class _JogoScreenState extends State<JogoScreen> {
       return;
     }
 
+    // continua
     gerarPergunta();
   }
 
@@ -167,11 +145,12 @@ class _JogoScreenState extends State<JogoScreen> {
   // TEMPO ESGOTADO
   // =========================
   void tempoEsgotado() {
+    controller.erro();
+
     pararJogo(
-      "⏰ Tempo esgotado!\nFase reiniciada\n\nPressione ENTER",
+      "⏰ Tempo esgotado!\nFase reiniciada",
     );
 
-    controller.reiniciarFase();
     perguntaAtual = null;
     tempoRestante = 60;
   }
@@ -198,66 +177,77 @@ class _JogoScreenState extends State<JogoScreen> {
       appBar: AppBar(
         title: const Text("Matemática Divertida"),
       ),
-      body: RawKeyboardListener(
-        focusNode: keyboardFocus,
-        onKey: (event) {
-          if (event is RawKeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            onEnter();
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              GameHud(state: state),
-
-              const SizedBox(height: 10),
-
-              Text(
-                "⏱️ $tempoRestante s",
-                style: const TextStyle(fontSize: 20, color: Colors.red),
+      body: FocusScope(
+        autofocus: true,
+        child: Shortcuts(
+          shortcuts: {
+            LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+          },
+          child: Actions(
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (intent) {
+                  onEnter();
+                  return null;
+                },
               ),
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  GameHud(state: state),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
-              if (mensagem.isNotEmpty)
-                Text(
-                  mensagem,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 18),
-                ),
+                  Text(
+                    "⏱️ $tempoRestante s",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.red,
+                    ),
+                  ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              if (jogoAtivo && perguntaAtual != null)
-                Column(
-                  children: [
+                  if (mensagem.isNotEmpty)
                     Text(
-                      perguntaAtual!.pergunta,
-                      style: const TextStyle(fontSize: 22),
+                      mensagem,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 18),
                     ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: respostaController,
-                      focusNode: inputFocus,
-                      keyboardType: TextInputType.number,
-                      onSubmitted: (_) => onEnter(),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: "Digite sua resposta",
-                      ),
+
+                  const SizedBox(height: 20),
+
+                  if (jogoAtivo && perguntaAtual != null)
+                    Column(
+                      children: [
+                        Text(
+                          perguntaAtual!.pergunta,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: respostaController,
+                          keyboardType: TextInputType.number,
+                          onSubmitted: (_) => responder(),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Digite sua resposta",
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              ElevatedButton(
-                onPressed: onEnter,
-                child: Text(jogoAtivo ? "Confirmar" : "Iniciar"),
+                  ElevatedButton(
+                    onPressed: onEnter,
+                    child: Text(jogoAtivo ? "Confirmar" : "Iniciar"),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

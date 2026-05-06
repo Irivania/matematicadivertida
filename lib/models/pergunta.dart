@@ -4,7 +4,7 @@ class Pergunta {
   final List<String>? opcoes;
   final String tipo;
 
-  Pergunta({
+  const Pergunta({
     required this.pergunta,
     required this.resposta,
     this.opcoes,

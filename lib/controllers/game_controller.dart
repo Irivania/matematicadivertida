@@ -1,32 +1,61 @@
 import '../models/game_state.dart';
 
+/// Controlador principal do fluxo do jogo.
+/// Centraliza regras de pontuação, avanço de fases e resets.
 class GameController {
-  final GameState state = GameState();
+  final GameState _state = GameState();
 
-  bool responder(bool correto) {
+  GameState get state => _state;
+
+  // =========================
+  // RESPONDER
+  // =========================
+  ResultadoResposta responder(bool correto) {
     if (correto) {
-      state.registrarAcerto();
+      _state.registrarAcerto();
     }
 
-    state.avancarPergunta();
+    _state.avancarPergunta();
 
-    return state.faseCompleta();
+    // 🔥 sem gambiarra — estado controla limite
+    return _state.faseCompleta()
+        ? ResultadoResposta.faseCompleta
+        : ResultadoResposta.continuar;
   }
 
+  // =========================
+  // ERRO
+  // =========================
   void erro() {
-    state.avancarPergunta();
+    _state.removerPontosFase(); // 🔥 responsabilidade do model
+    _state.resetFase();
   }
 
+  // =========================
+  // REINICIAR FASE
+  // =========================
   void reiniciarFase() {
-    state.resetFase();
+    erro(); // reaproveita regra
   }
 
+  // =========================
+  // PRÓXIMA FASE
+  // =========================
   void proximaFase() {
-    state.fase++;
-    state.resetFase();
+    _state.fase++;
+    _state.resetFase();
   }
 
+  // =========================
+  // RESET TOTAL
+  // =========================
   void reiniciarJogo() {
-    state.resetJogo();
+    _state.resetJogo();
   }
+}
+
+/// Enum para controle de fluxo
+enum ResultadoResposta {
+  faseCompleta,
+  continuar,
 }
