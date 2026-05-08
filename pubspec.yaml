@@ -1,9 +1,6 @@
 name: matematicadivertida
-
 description: "Jogo educativo de matemática gamificado em Flutter."
-
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -15,7 +12,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # 🔊 Áudio
+  # 🔊 Áudio para efeitos sonoros e trilha
   audioplayers: ^6.6.0
 
 dev_dependencies:
@@ -25,14 +22,21 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
-
   uses-material-design: true
 
+  # ==========================================================
+  # 🖼️ ATIVOS (Imagens, Sons e Ícones)
+  # ==========================================================
+  assets:
+    # Registra toda a pasta de imagens, incluindo os 3 perfis
+    - assets/images/
+    # Se você for usar sons futuramente, basta criar a pasta e descomentar:
+    # - assets/audio/
 
-  # =========================
-  # 🔤 FONTES (opcional)
-  # =========================
+  # ==========================================================
+  # 🔤 FONTES (Opcional)
+  # ==========================================================
   # fonts:
-  #   - family: Game
+  #   - family: GameFont
   #     fonts:
-  #       - asset: assets/fonts/Game.ttf
+  #       - asset: assets/fonts/PressStart2P-Regular.ttf
