@@ -4,113 +4,138 @@ import '../models/pergunta.dart';
 class PerguntaService {
   final Random rand = Random();
 
-  final Set<String> _historico = {};
+  // Histórico anti-repetição
+  final List<String> _historico = [];
+
   static const int _maxHistorico = 50;
 
   String _id(Pergunta p) => "${p.pergunta}_${p.resposta}";
 
-  // =========================
-  // 🔥 COMPATIBILIDADE COM SEU JOGO ATUAL
-  // =========================
+  // =====================================================
+  // 🔥 COMPATIBILIDADE COM O JOGO ANTIGO
+  // =====================================================
+
   Pergunta gerarSimples() {
-    return _adicaoFacil();
+    return _operacaoBasica("+", 1, 10);
   }
 
-  // =========================
-  // ENTRY UNIVERSAL (NOVO SISTEMA)
-  // =========================
+  // =====================================================
+  // 🚀 ENTRADA UNIVERSAL
+  // =====================================================
+
   Pergunta gerar({
     required String perfil,
     required String nivel,
     required int fase,
   }) {
     Pergunta pergunta;
+
     int tentativas = 0;
 
     do {
-      if (perfil == "crianca") {
-        pergunta = _gerarCrianca(nivel, fase);
-      } else if (perfil == "adulto") {
-        pergunta = _gerarAdulto(nivel, fase);
-      } else {
-        pergunta = _gerarProfessor(nivel, fase);
-      }
+      pergunta = switch (perfil) {
+        "crianca" => _gerarCrianca(nivel, fase),
+        "adulto" => _gerarAdulto(nivel, fase),
+        _ => _gerarProfessor(nivel, fase),
+      };
 
       tentativas++;
 
+      // Evita loop infinito
       if (tentativas >= 5) {
         _historico.clear();
-        break;
       }
     } while (_historico.contains(_id(pergunta)));
 
     _historico.add(_id(pergunta));
 
+    // Mantém histórico controlado
     if (_historico.length > _maxHistorico) {
-      _historico.clear();
+      _historico.removeAt(0);
     }
 
     return pergunta;
   }
 
-  // =========================
+  // =====================================================
   // 👶 CRIANÇA
-  // =========================
+  // =====================================================
+
   Pergunta _gerarCrianca(String nivel, int fase) {
     switch (nivel) {
       case "Bronze":
-        if (fase <= 3) return _adicaoFacil();
-        if (fase <= 6) return _subtracaoFacil();
-        return _problemaSimples();
+        return fase <= 3
+            ? _operacaoBasica("+", 1, 10)
+            : fase <= 6
+                ? _operacaoBasica("-", 10, 20)
+                : _problemaSimples();
 
       case "Prata":
-        if (fase <= 3) return _adicaoMedia();
-        if (fase <= 6) return _subtracaoMedia();
-        return _multiplicacaoFacil();
+        return fase <= 3
+            ? _operacaoBasica("+", 10, 50)
+            : fase <= 6
+                ? _operacaoBasica("-", 50, 100)
+                : _operacaoBasica("×", 2, 10);
 
       case "Ouro":
-        if (fase <= 3) return _multiplicacaoMedia();
-        if (fase <= 6) return _divisao();
-        return _problemaMedio();
+        return fase <= 3
+            ? _operacaoBasica("×", 5, 20)
+            : fase <= 6
+                ? _divisao()
+                : _problemaMedio();
 
       case "Platina":
-        if (fase <= 3) return _divisao();
-        if (fase <= 6) return _problemaMedio();
-        return _fracao();
+        return fase <= 3
+            ? _divisao()
+            : fase <= 6
+                ? _problemaMedio()
+                : _fracao();
 
       case "Mestre":
-        if (fase <= 3) return _fracao();
-        if (fase <= 6) return _porcentagem();
-        return _problemaDificil();
-    }
+        return fase <= 3
+            ? _fracao()
+            : fase <= 6
+                ? _porcentagem()
+                : _problemaDificil();
 
-    return _adicaoFacil();
+      default:
+        return _operacaoBasica("+", 1, 10);
+    }
   }
 
-  // =========================
+  // =====================================================
   // 🧑 ADULTO
-  // =========================
+  // =====================================================
+
   Pergunta _gerarAdulto(String nivel, int fase) {
     switch (nivel) {
       case "Bronze":
-        if (fase <= 3) return _multiplicacaoMedia();
-        if (fase <= 6) return _divisao();
-        return _potenciaSimples();
+        return fase <= 3
+            ? _operacaoBasica("×", 5, 20)
+            : fase <= 6
+                ? _divisao()
+                : _potenciaSimples();
 
       case "Prata":
-        if (fase <= 3) return _fracao();
-        if (fase <= 6) return _numeroNegativo();
-        return _expressaoNumerica();
+        return fase <= 3
+            ? _fracao()
+            : fase <= 6
+                ? _numeroNegativo()
+                : _expressaoNumerica();
 
       case "Ouro":
-        if (fase <= 3) return _equacao1Grau();
-        if (fase <= 6) return _porcentagem();
-        return _regraDeTres();
+        return fase <= 3
+            ? _equacao1Grau()
+            : fase <= 6
+                ? _porcentagem()
+                : _regraDeTres();
 
       case "Platina":
-        if (fase <= 3) return _equacao1Grau();
-        if (fase <= 6) return _raizQuadrada();
-        return _problemaDificil();
+        return fase <= 3
+            ? _equacao1Grau()
+            : fase <= 6
+                ? _raizQuadrada()
+                : _problemaDificil();
 
       case "Mestre":
         return _random([
@@ -120,35 +145,45 @@ class PerguntaService {
           _raizQuadrada,
           _problemaDificil,
         ]);
-    }
 
-    return _adicaoMedia();
+      default:
+        return _operacaoBasica("+", 10, 50);
+    }
   }
 
-  // =========================
+  // =====================================================
   // 👨‍🏫 PROFESSOR
-  // =========================
+  // =====================================================
+
   Pergunta _gerarProfessor(String nivel, int fase) {
     switch (nivel) {
       case "Bronze":
-        if (fase <= 3) return _fracao();
-        if (fase <= 6) return _porcentagem();
-        return _problemaMedio();
+        return fase <= 3
+            ? _fracao()
+            : fase <= 6
+                ? _porcentagem()
+                : _problemaMedio();
 
       case "Prata":
-        if (fase <= 3) return _numeroNegativo();
-        if (fase <= 6) return _expressaoNumerica();
-        return _divisao();
+        return fase <= 3
+            ? _numeroNegativo()
+            : fase <= 6
+                ? _expressaoNumerica()
+                : _divisao();
 
       case "Ouro":
-        if (fase <= 3) return _equacao1Grau();
-        if (fase <= 6) return _regraDeTres();
-        return _porcentagem();
+        return fase <= 3
+            ? _equacao1Grau()
+            : fase <= 6
+                ? _regraDeTres()
+                : _porcentagem();
 
       case "Platina":
-        if (fase <= 3) return _equacao1Grau();
-        if (fase <= 6) return _potenciaAvancada();
-        return _raizQuadrada();
+        return fase <= 3
+            ? _equacao1Grau()
+            : fase <= 6
+                ? _potenciaAvancada()
+                : _raizQuadrada();
 
       case "Mestre":
         return _random([
@@ -158,77 +193,62 @@ class PerguntaService {
           _potenciaAvancada,
           _problemaDificil,
         ]);
-    }
 
-    return _adicaoMedia();
+      default:
+        return _operacaoBasica("+", 10, 50);
+    }
   }
 
-  // =========================
-  // RANDOM
-  // =========================
+  // =====================================================
+  // 🎲 RANDOM
+  // =====================================================
+
   Pergunta _random(List<Function> lista) {
     return lista[rand.nextInt(lista.length)]();
   }
 
-  // =========================
-  // BÁSICOS
-  // =========================
+  // =====================================================
+  // 🔢 OPERAÇÕES PARAMETRIZADAS
+  // =====================================================
 
-  Pergunta _adicaoFacil() {
-    int a = rand.nextInt(10) + 1;
-    int b = rand.nextInt(10) + 1;
-    return _base("$a + $b", a + b, "adicao");
+  Pergunta _operacaoBasica(String op, int min, int max) {
+    int a = rand.nextInt(max - min) + min;
+    int b = rand.nextInt(max - min) + min;
+
+    int resultado = switch (op) {
+      "+" => a + b,
+      "-" => a - b,
+      "×" => a * b,
+      "÷" => b == 0 ? a : a ~/ b,
+      _ => 0,
+    };
+
+    return _base("$a $op $b", resultado, op);
   }
 
-  Pergunta _adicaoMedia() {
-    int a = rand.nextInt(50) + 10;
-    int b = rand.nextInt(50) + 10;
-    return _base("$a + $b", a + b, "adicao");
-  }
-
-  Pergunta _subtracaoFacil() {
-    int a = rand.nextInt(20) + 10;
-    int b = rand.nextInt(a);
-    return _base("$a - $b", a - b, "subtracao");
-  }
-
-  Pergunta _subtracaoMedia() {
-    int a = rand.nextInt(100) + 50;
-    int b = rand.nextInt(50);
-    return _base("$a - $b", a - b, "subtracao");
-  }
-
-  Pergunta _multiplicacaoFacil() {
-    int a = rand.nextInt(10) + 1;
-    int b = rand.nextInt(10) + 1;
-    return _base("$a × $b", a * b, "multiplicacao");
-  }
-
-  Pergunta _multiplicacaoMedia() {
-    int a = rand.nextInt(20) + 5;
-    int b = rand.nextInt(10) + 2;
-    return _base("$a × $b", a * b, "multiplicacao");
-  }
+  // =====================================================
+  // 📘 INTERMEDIÁRIO / AVANÇADO
+  // =====================================================
 
   Pergunta _divisao() {
-    int b = rand.nextInt(10) + 2;
-    int r = rand.nextInt(10) + 2;
+    int b = rand.nextInt(9) + 2;
+    int r = rand.nextInt(9) + 2;
+
     int a = b * r;
+
     return _base("$a ÷ $b", r, "divisao");
   }
 
-  // =========================
-  // INTERMEDIÁRIO
-  // =========================
-
   Pergunta _potenciaSimples() {
     int n = rand.nextInt(10) + 2;
+
     return _base("$n²", n * n, "potencia");
   }
 
   Pergunta _numeroNegativo() {
     int a = rand.nextInt(20);
     int b = rand.nextInt(20);
+
     return _base("$a - $b", a - b, "negativo");
   }
 
@@ -236,56 +256,77 @@ class PerguntaService {
     int a = rand.nextInt(10) + 1;
     int b = rand.nextInt(10) + 1;
     int c = rand.nextInt(10) + 1;
+
     int r = a + b * c;
+
     return _base("$a + $b × $c", r, "expressao");
   }
 
   Pergunta _equacao1Grau() {
     int x = rand.nextInt(10) + 1;
+
     int a = rand.nextInt(5) + 1;
     int b = rand.nextInt(10);
+
     int r = a * x + b;
 
-    return _comOpcoes("$a x + $b = $r. x = ?", x, "equacao");
+    return _comOpcoes(
+      "$a x + $b = $r. x = ?",
+      x,
+      "equacao",
+    );
   }
 
   Pergunta _regraDeTres() {
     int a = 2;
     int b = rand.nextInt(10) + 2;
     int c = rand.nextInt(5) + 1;
+
     int x = (b * c) ~/ a;
 
-    return _base("Se $a custa $b, quanto custa $c?", x, "regra3");
+    return _base(
+      "Se $a custa $b, quanto custa $c?",
+      x,
+      "regra3",
+    );
   }
-
-  // =========================
-  // AVANÇADO
-  // =========================
 
   Pergunta _raizQuadrada() {
     int n = rand.nextInt(15) + 2;
+
     int num = n * n;
+
     return _base("√$num", n, "raiz");
   }
 
   Pergunta _potenciaAvancada() {
     int base = rand.nextInt(5) + 2;
     int exp = rand.nextInt(3) + 2;
+
     int r = pow(base, exp).toInt();
+
     return _base("$base^$exp", r, "potencia");
   }
 
   Pergunta _fracao() {
-    return _comOpcoes("Qual é metade de 20?", 10, "fracao");
+    return _comOpcoes(
+      "Qual é metade de 20?",
+      10,
+      "fracao",
+    );
   }
 
   Pergunta _porcentagem() {
-    return _comOpcoes("10% de 50 é:", 5, "porcentagem");
+    return _comOpcoes(
+      "10% de 50 é:",
+      5,
+      "porcentagem",
+    );
   }
 
-  // =========================
-  // PROBLEMAS
-  // =========================
+  // =====================================================
+  // 🧠 PROBLEMAS
+  // =====================================================
 
   Pergunta _problemaSimples() {
     int a = rand.nextInt(10) + 1;
@@ -320,11 +361,15 @@ class PerguntaService {
     );
   }
 
-  // =========================
-  // HELPERS
-  // =========================
+  // =====================================================
+  // 🛠 HELPERS
+  // =====================================================
 
-  Pergunta _base(String exp, int resultado, String tipo) {
+  Pergunta _base(
+    String exp,
+    int resultado,
+    String tipo,
+  ) {
     return Pergunta(
       pergunta: "Quanto é $exp =",
       resposta: resultado.toString(),
@@ -332,7 +377,11 @@ class PerguntaService {
     );
   }
 
-  Pergunta _comOpcoes(String pergunta, int correta, String tipo) {
+  Pergunta _comOpcoes(
+    String pergunta,
+    int correta,
+    String tipo,
+  ) {
     return Pergunta(
       pergunta: pergunta,
       resposta: correta.toString(),
@@ -345,9 +394,16 @@ class PerguntaService {
     Set<int> opcoes = {correta};
 
     while (opcoes.length < 4) {
-      opcoes.add(correta + rand.nextInt(10) - 5);
+      int candidato = correta + rand.nextInt(10) - 5;
+
+      if (candidato >= 0) {
+        opcoes.add(candidato);
+      }
     }
 
-    return opcoes.map((e) => e.toString()).toList()..shuffle();
+    return opcoes
+        .map((e) => e.toString())
+        .toList()
+      ..shuffle();
   }
 }

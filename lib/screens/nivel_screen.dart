@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../routes/app_routes.dart';
+import '../core/enums/nivel_enum.dart';
+import '../core/enums/nivel_ext.dart';
 
 class NivelScreen extends StatelessWidget {
   const NivelScreen({super.key});
@@ -12,15 +14,14 @@ class NivelScreen extends StatelessWidget {
       appBar: AppBar(title: Text("Nível - $perfil")),
       body: Column(
         children: [
-          _btn(context, "Bronze", perfil),
-          _btn(context, "Prata", perfil),
-          _btn(context, "Ouro", perfil),
+          for (final nivel in Nivel.values)
+            _btn(context, nivel, perfil),
         ],
       ),
     );
   }
 
-  Widget _btn(BuildContext context, String nivel, dynamic perfil) {
+  Widget _btn(BuildContext context, Nivel nivel, dynamic perfil) {
     return ElevatedButton(
       onPressed: () {
         Navigator.pushNamed(
@@ -28,11 +29,11 @@ class NivelScreen extends StatelessWidget {
           AppRoutes.jogo,
           arguments: {
             "perfil": perfil,
-            "nivel": nivel,
+            "nivel": nivel.name, // ou nivel se espera o enum
           },
         );
       },
-      child: Text(nivel),
+      child: Text(nivel.nome),
     );
   }
 }
