@@ -38,7 +38,7 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
 
-          // Overlay
+          // Overlay escuro
           Positioned.fill(
             child: Container(
               color: Colors.black.withOpacity(0.45),
@@ -52,27 +52,27 @@ class PerfilScreen extends StatelessWidget {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
+                horizontal: 14,
+                vertical: 8,
               ),
 
               child: Column(
                 children: [
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   const Text(
                     "ESCOLHA O PERFIL",
 
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
                     ),
                   ),
 
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 18),
 
                   // =========================================
                   // GRID ESTILO NETFLIX
@@ -84,16 +84,19 @@ class PerfilScreen extends StatelessWidget {
                       // 2 cards por linha
                       crossAxisCount: 2,
 
-                      // 🔥 TAMANHO PEQUENO
-                      childAspectRatio: 0.82,
+                      // 🔥 CARDS MENORES
+                      childAspectRatio: 1.15,
 
-                      // 🔥 ESPAÇAMENTO
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
+                      // 🔥 ESPAÇAMENTO MENOR
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
 
                       children: [
 
+                        // =====================================
                         // MENINO
+                        // =====================================
+
                         _cardPerfil(
                           context,
                           nome: "MENINO",
@@ -101,7 +104,10 @@ class PerfilScreen extends StatelessWidget {
                           imagem: "assets/images/menino.jpeg",
                         ),
 
+                        // =====================================
                         // MENINA
+                        // =====================================
+
                         _cardPerfil(
                           context,
                           nome: "MENINA",
@@ -109,7 +115,10 @@ class PerfilScreen extends StatelessWidget {
                           imagem: "assets/images/menina.jpeg",
                         ),
 
+                        // =====================================
                         // ADULTO
+                        // =====================================
+
                         _cardPerfil(
                           context,
                           nome: "ADULTO",
@@ -117,7 +126,10 @@ class PerfilScreen extends StatelessWidget {
                           imagem: "assets/images/adulto1.jpeg",
                         ),
 
+                        // =====================================
                         // PROFESSOR
+                        // =====================================
+
                         _cardPerfil(
                           context,
                           nome: "PROFESSOR",
@@ -161,19 +173,19 @@ class PerfilScreen extends StatelessWidget {
       child: Container(
 
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.45),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
+              color: Colors.black.withOpacity(0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
 
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
 
           child: Stack(
             children: [
@@ -190,7 +202,7 @@ class PerfilScreen extends StatelessWidget {
               ),
 
               // =============================================
-              // OVERLAY ESCURO
+              // OVERLAY
               // =============================================
 
               Positioned.fill(
@@ -202,7 +214,7 @@ class PerfilScreen extends StatelessWidget {
 
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.85),
+                        Colors.black.withOpacity(0.8),
                       ],
                     ),
                   ),
@@ -214,19 +226,19 @@ class PerfilScreen extends StatelessWidget {
               // =============================================
 
               Positioned(
-                bottom: 12,
-                left: 10,
-                right: 10,
+                bottom: 8,
+                left: 8,
+                right: 8,
 
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    vertical: 8,
+                    vertical: 6,
                   ),
 
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.55),
 
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
 
                     border: Border.all(
                       color: Colors.white24,
@@ -240,9 +252,9 @@ class PerfilScreen extends StatelessWidget {
 
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
