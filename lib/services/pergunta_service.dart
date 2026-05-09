@@ -6,7 +6,6 @@ class PerguntaService {
 
   // Histórico anti-repetição
   final List<String> _historico = [];
-
   static const int _maxHistorico = 50;
 
   String _id(Pergunta p) => "${p.pergunta}_${p.resposta}";
@@ -20,7 +19,7 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 🚀 ENTRADA UNIVERSAL
+  // 🚀 ENTRADA UNIVERSAL (Ajustada)
   // =====================================================
 
   Pergunta gerar({
@@ -29,19 +28,21 @@ class PerguntaService {
     required int fase,
   }) {
     Pergunta pergunta;
-
     int tentativas = 0;
 
+    // Normalização para evitar erros de maiúsculas/minúsculas vindos da tela
+    final pNorm = perfil.toLowerCase().trim();
+
     do {
-      pergunta = switch (perfil) {
-        "crianca" => _gerarCrianca(nivel, fase),
+      pergunta = switch (pNorm) {
+        "crianca" || "criança" => _gerarCrianca(nivel, fase),
         "adulto" => _gerarAdulto(nivel, fase),
-        _ => _gerarProfessor(nivel, fase),
+        _ => _gerarProfessor(nivel, fase), // Professor é o padrão/fallback
       };
 
       tentativas++;
 
-      // Evita loop infinito
+      // Limpa histórico se não conseguir gerar uma pergunta nova em 5 tentativas
       if (tentativas >= 5) {
         _historico.clear();
       }
@@ -49,7 +50,6 @@ class PerguntaService {
 
     _historico.add(_id(pergunta));
 
-    // Mantém histórico controlado
     if (_historico.length > _maxHistorico) {
       _historico.removeAt(0);
     }
@@ -99,6 +99,8 @@ class PerguntaService {
                 : _problemaDificil();
 
       default:
+        // Caso o nível venha com nome diferente (ex: "Iniciante"), 
+        // ele assume a dificuldade base do perfil.
         return _operacaoBasica("+", 1, 10);
     }
   }
@@ -200,16 +202,12 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 🎲 RANDOM
+  // 🎲 RANDOM E OPERAÇÕES (Auxiliares)
   // =====================================================
 
   Pergunta _random(List<Function> lista) {
     return lista[rand.nextInt(lista.length)]();
   }
-
-  // =====================================================
-  // 🔢 OPERAÇÕES PARAMETRIZADAS
-  // =====================================================
 
   Pergunta _operacaoBasica(String op, int min, int max) {
     int a = rand.nextInt(max - min) + min;
@@ -226,29 +224,21 @@ class PerguntaService {
     return _base("$a $op $b", resultado, op);
   }
 
-  // =====================================================
-  // 📘 INTERMEDIÁRIO / AVANÇADO
-  // =====================================================
-
   Pergunta _divisao() {
     int b = rand.nextInt(9) + 2;
     int r = rand.nextInt(9) + 2;
-
     int a = b * r;
-
     return _base("$a ÷ $b", r, "divisao");
   }
 
   Pergunta _potenciaSimples() {
     int n = rand.nextInt(10) + 2;
-
     return _base("$n²", n * n, "potencia");
   }
 
   Pergunta _numeroNegativo() {
     int a = rand.nextInt(20);
-    int b = rand.nextInt(20);
-
+    int b = rand.nextInt(20) + a; // Garante resultado negativo ou zero
     return _base("$a - $b", a - b, "negativo");
   }
 
@@ -256,120 +246,71 @@ class PerguntaService {
     int a = rand.nextInt(10) + 1;
     int b = rand.nextInt(10) + 1;
     int c = rand.nextInt(10) + 1;
-
-    int r = a + b * c;
-
+    int r = a + (b * c);
     return _base("$a + $b × $c", r, "expressao");
   }
 
   Pergunta _equacao1Grau() {
     int x = rand.nextInt(10) + 1;
-
     int a = rand.nextInt(5) + 1;
     int b = rand.nextInt(10);
-
     int r = a * x + b;
-
-    return _comOpcoes(
-      "$a x + $b = $r. x = ?",
-      x,
-      "equacao",
-    );
+    return _comOpcoes("$a x + $b = $r. x = ?", x, "equacao");
   }
 
   Pergunta _regraDeTres() {
     int a = 2;
-    int b = rand.nextInt(10) + 2;
+    int b = (rand.nextInt(10) + 2) * 2; // Garante que seja divisível por 2
     int c = rand.nextInt(5) + 1;
-
     int x = (b * c) ~/ a;
-
-    return _base(
-      "Se $a custa $b, quanto custa $c?",
-      x,
-      "regra3",
-    );
+    return _base("Se $a custa $b, quanto custa $c?", x, "regra3");
   }
 
   Pergunta _raizQuadrada() {
     int n = rand.nextInt(15) + 2;
-
     int num = n * n;
-
     return _base("√$num", n, "raiz");
   }
 
   Pergunta _potenciaAvancada() {
     int base = rand.nextInt(5) + 2;
     int exp = rand.nextInt(3) + 2;
-
     int r = pow(base, exp).toInt();
-
     return _base("$base^$exp", r, "potencia");
   }
 
   Pergunta _fracao() {
-    return _comOpcoes(
-      "Qual é metade de 20?",
-      10,
-      "fracao",
-    );
+    int total = (rand.nextInt(10) + 1) * 2;
+    return _comOpcoes("Qual é metade de $total?", total ~/ 2, "fracao");
   }
 
   Pergunta _porcentagem() {
-    return _comOpcoes(
-      "10% de 50 é:",
-      5,
-      "porcentagem",
-    );
+    int valor = (rand.nextInt(10) + 1) * 10;
+    return _comOpcoes("10% de $valor é:", valor ~/ 10, "porcentagem");
   }
-
-  // =====================================================
-  // 🧠 PROBLEMAS
-  // =====================================================
 
   Pergunta _problemaSimples() {
     int a = rand.nextInt(10) + 1;
     int b = rand.nextInt(10) + 1;
-
-    return _base(
-      "João tinha $a balas e ganhou mais $b. Quantas tem agora?",
-      a + b,
-      "problema",
-    );
+    return _base("João tinha $a balas e ganhou $b. Total?", a + b, "problema");
   }
 
   Pergunta _problemaMedio() {
     int preco = rand.nextInt(20) + 5;
     int qtd = rand.nextInt(5) + 2;
-
-    return _base(
-      "Um produto custa R\$ $preco. Se comprar $qtd, quanto paga?",
-      preco * qtd,
-      "problema",
-    );
+    return _base("Um doce custa R\$ $preco. Se comprar $qtd, quanto paga?", preco * qtd, "problema");
   }
 
   Pergunta _problemaDificil() {
-    int total = rand.nextInt(100) + 50;
-    int pessoas = rand.nextInt(5) + 2;
-
-    return _base(
-      "Dividir $total igualmente entre $pessoas pessoas. Quanto cada recebe?",
-      total ~/ pessoas,
-      "problema",
-    );
+    int total = (rand.nextInt(50) + 10) * 2;
+    return _base("Dividir $total igualmente entre 2 pessoas. Quanto cada uma recebe?", total ~/ 2, "problema");
   }
 
   // =====================================================
-  // 🛠 HELPERS
+  // 🛠 HELPERS DE FORMATAÇÃO
   // =====================================================
 
-  Pergunta _base(
-    String exp,
-    int resultado,
-    String tipo,
-  ) {
+  Pergunta _base(String exp, int resultado, String tipo) {
     return Pergunta(
       pergunta: "Quanto é $exp =",
       resposta: resultado.toString(),
@@ -377,11 +318,7 @@ class PerguntaService {
     );
   }
 
-  Pergunta _comOpcoes(
-    String pergunta,
-    int correta,
-    String tipo,
-  ) {
+  Pergunta _comOpcoes(String pergunta, int correta, String tipo) {
     return Pergunta(
       pergunta: pergunta,
       resposta: correta.toString(),
@@ -392,18 +329,10 @@ class PerguntaService {
 
   List<String> _gerarOpcoes(int correta) {
     Set<int> opcoes = {correta};
-
     while (opcoes.length < 4) {
       int candidato = correta + rand.nextInt(10) - 5;
-
-      if (candidato >= 0) {
-        opcoes.add(candidato);
-      }
+      if (candidato >= 0) opcoes.add(candidato);
     }
-
-    return opcoes
-        .map((e) => e.toString())
-        .toList()
-      ..shuffle();
+    return opcoes.map((e) => e.toString()).toList()..shuffle();
   }
 }

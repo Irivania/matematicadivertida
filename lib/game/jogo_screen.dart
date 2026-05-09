@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'dart:ui'; 
 import '../services/pergunta_service.dart';
 import '../models/pergunta.dart';
 import '../controllers/game_controller.dart';
@@ -9,277 +7,544 @@ import '../controllers/game_controller.dart';
 class JogoScreen extends StatefulWidget {
   final String perfil;
 
-  const JogoScreen({super.key, required this.perfil});
+  const JogoScreen({
+    super.key,
+    required this.perfil,
+  });
 
   @override
   State<JogoScreen> createState() => _JogoScreenState();
 }
 
-class _JogoScreenState extends State<JogoScreen> with SingleTickerProviderStateMixin {
+class _JogoScreenState extends State<JogoScreen>
+    with SingleTickerProviderStateMixin {
+
   final service = PerguntaService();
   final controller = GameController();
+
   Pergunta? perguntaAtual;
+
   final respostaController = TextEditingController();
+
   final FocusNode respostaFocusNode = FocusNode();
-  
+
   Timer? timer;
+
   int tempoRestante = 60;
+
   bool jogoAtivo = false;
-  String mensagem = 'Pressione ENTER para iniciar';
+
+  String mensagem = '';
 
   late AnimationController _pulseController;
+
+  // =========================================================
+  // INIT
+  // =========================================================
 
   @override
   void initState() {
     super.initState();
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
-    
-    // Foco inicial ao abrir a tela
-    WidgetsBinding.instance.addPostFrameCallback((_) => _garantirFoco());
+
+    // 🔥 INICIA AUTOMATICAMENTE
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      iniciar();
+    });
   }
 
   @override
   void dispose() {
     timer?.cancel();
+
     respostaController.dispose();
+
     respostaFocusNode.dispose();
+
     _pulseController.dispose();
+
     super.dispose();
   }
 
-  // --- Função para Garantir o Teclado Sempre Aberto ---
+  // =========================================================
+  // FOCO
+  // =========================================================
+
   void _garantirFoco() {
     if (mounted) {
       FocusScope.of(context).requestFocus(respostaFocusNode);
     }
   }
 
+  // =========================================================
+  // IMAGEM DE FUNDO
+  // =========================================================
+
   String _getImagemFundo() {
     final p = widget.perfil.toLowerCase().trim();
-    if (p.contains('crianca') || p.contains('criança')) return 'assets/images/crianca.png';
-    if (p.contains('adulto')) return 'assets/images/adulto.png';
-    if (p.contains('professor')) return 'assets/images/professor.png';
-    return 'assets/images/crianca.png';
+
+    switch (p) {
+      case 'professor':
+        return 'assets/images/professor.png';
+
+      case 'adulto':
+        return 'assets/images/adulto.png';
+
+      case 'crianca':
+      default:
+        return 'assets/images/crianca.png';
+    }
   }
 
-  void iniciar() {
-    setState(() {
-      jogoAtivo = true;
-      mensagem = '';
-      tempoRestante = 60;
-    });
-    controller.state.resetFase();
-    gerarPergunta();
-    iniciarTimer();
+  // =========================================================
+  // NÍVEL AUTOMÁTICO
+  // =========================================================
+
+  String _getNivelNomeParaService() {
+    int fase = controller.state.fase;
+
+    if (fase <= 3) return 'Bronze';
+
+    if (fase <= 6) return 'Prata';
+
+    if (fase <= 9) return 'Ouro';
+
+    if (fase <= 12) return 'Platina';
+
+    return 'Mestre';
   }
+
+  // =========================================================
+  // INICIAR
+  // =========================================================
+
+  void iniciar() {
+
+    jogoAtivo = true;
+
+    mensagem = '';
+
+    tempoRestante = 60;
+
+    controller.state.resetFase();
+
+    gerarPergunta();
+
+    iniciarTimer();
+
+    setState(() {});
+  }
+
+  // =========================================================
+  // GERAR PERGUNTA
+  // =========================================================
 
   void gerarPergunta() {
     final p = service.gerar(
       perfil: widget.perfil,
-      nivel: _getNivelNome(),
+      nivel: _getNivelNomeParaService(),
       fase: controller.state.fase,
     );
+
     setState(() {
       perguntaAtual = p;
+
       respostaController.clear();
     });
-    // Força o teclado a aparecer para a nova pergunta
-    _garantirFoco();
+
+    // 🔥 FOCO AUTOMÁTICO
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _garantirFoco();
+    });
   }
+
+  // =========================================================
+  // TIMER
+  // =========================================================
 
   void iniciarTimer() {
     timer?.cancel();
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted || !jogoAtivo) { t.cancel(); return; }
-      if (tempoRestante <= 0) { t.cancel(); _finalizarPorTempo(); }
-      else { setState(() => tempoRestante--); }
-    });
+
+    timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (t) {
+        if (!mounted || !jogoAtivo) {
+          t.cancel();
+          return;
+        }
+
+        if (tempoRestante <= 0) {
+          t.cancel();
+
+          _finalizarPorTempo();
+        } else {
+          setState(() {
+            tempoRestante--;
+          });
+        }
+      },
+    );
   }
 
+  // =========================================================
+  // RESPONDER
+  // =========================================================
+
   void responder() {
+
     if (!jogoAtivo || perguntaAtual == null) return;
+
     final resp = respostaController.text.trim();
+
     if (resp.isEmpty) return;
 
     final correto = resp == perguntaAtual!.resposta;
+
     final resultado = controller.responder(correto);
 
+    // ❌ ERROU
     if (!correto) {
-      _pararJogo("❌ Ops! Resposta errada.\nA resposta era: ${perguntaAtual!.resposta}");
+
+      _pararJogo(
+        "❌ Resposta errada\n\n"
+        "Resposta correta: ${perguntaAtual!.resposta}",
+      );
+
       return;
     }
 
-    if (resultado.toString().toLowerCase().contains('fasecompleta')) {
+    // 🏆 FASE COMPLETA
+    if (resultado == ResultadoResposta.faseCompleta) {
+
       final faseConcluida = controller.state.fase;
+
       controller.proximaFase();
-      _pararJogo("🏆 FASE $faseConcluida CONCLUÍDA!\n🚀 Pressione ENTER para continuar");
+
+      _pararJogo(
+        "🏆 FASE $faseConcluida CONCLUÍDA!",
+      );
+
     } else {
+
+      // ✅ PRÓXIMA PERGUNTA
       gerarPergunta();
     }
   }
 
-  void _finalizarPorTempo() => _pararJogo("⏰ O tempo acabou!\nVamos tentar de novo?");
+  // =========================================================
+  // TEMPO ESGOTADO
+  // =========================================================
+
+  void _finalizarPorTempo() {
+
+    _pararJogo(
+      "⏰ Tempo esgotado!",
+    );
+  }
+
+  // =========================================================
+  // PARAR
+  // =========================================================
 
   void _pararJogo(String msg) {
+
     timer?.cancel();
+
     setState(() {
+
       jogoAtivo = false;
+
       mensagem = msg;
+
       perguntaAtual = null;
     });
   }
 
-  String _getNivelNome() {
-    int fase = controller.state.fase;
-    if (fase <= 5) return 'Iniciante';
-    if (fase <= 10) return 'Intermediário';
-    return 'Mestre';
-  }
+  // =========================================================
+  // BUILD
+  // =========================================================
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      body: KeyboardListener(
-        focusNode: FocusNode(),
-        onKeyEvent: (event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-            jogoAtivo ? responder() : iniciar();
-          }
-        },
-        child: Stack(
-          children: [
-            Container(
-              key: ValueKey(_getImagemFundo()),
-              decoration: BoxDecoration(
-                image: DecorationImage(image: AssetImage(_getImagemFundo()), fit: BoxFit.cover),
+      backgroundColor: Colors.black,
+
+      body: Stack(
+        children: [
+
+          // ===================================================
+          // FUNDO
+          // ===================================================
+
+          Positioned.fill(
+            child: Image.asset(
+              _getImagemFundo(),
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Overlay
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.5),
+            ),
+          ),
+
+          // ===================================================
+          // CONTEÚDO
+          // ===================================================
+
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+
+              child: Column(
+                children: [
+
+                  _buildTopBar(),
+
+                  const SizedBox(height: 20),
+
+                  _buildGlassScoreBoard(),
+
+                  const Spacer(),
+
+                  _buildMainArea(),
+
+                  const Spacer(),
+
+                  // 🔥 BOTÃO CONFIRMAR
+                  _buildFooterButton(),
+                ],
               ),
             ),
-            Container(color: Colors.black.withOpacity(0.45)),
-
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    // --- Header com Botão de Desistir ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70),
-                          onPressed: () => Navigator.pop(context),
-                          tooltip: "Desistir",
-                        ),
-                        _buildHeader(),
-                        const SizedBox(width: 48), // Equilíbrio visual
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    _buildGlassScoreBoard(),
-                    const Spacer(),
-                    _buildMainArea(),
-                    const Spacer(),
-                    _buildFooterButton(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Text(
-      "MATEMÁTICA DIVERTIDA",
-      style: TextStyle(
-        color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900,
-        shadows: [const Shadow(color: Colors.black, blurRadius: 10)],
-      ),
-    );
-  }
-
-  Widget _buildGlassScoreBoard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
-            borderRadius: BorderRadius.circular(24),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _scoreItem("Fase", "${controller.state.fase}"),
-              _scoreItem("Tempo", "${tempoRestante}s", 
-                color: tempoRestante < 10 ? Colors.redAccent : Colors.cyanAccent),
-              _scoreItem("Pontos", "${controller.state.pontos}"),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _scoreItem(String label, String value, {Color color = Colors.white}) {
-    return Column(
+  // =========================================================
+  // TOPO
+  // =========================================================
+
+  Widget _buildTopBar() {
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
       children: [
-        Text(label.toUpperCase(), style: const TextStyle(color: Colors.white70, fontSize: 10)),
-        Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
+
+        IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white70,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+
+        Text(
+          _getNivelNomeParaService().toUpperCase(),
+
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+          ),
+        ),
+
+        const SizedBox(width: 48),
       ],
     );
   }
 
+  // =========================================================
+  // PLACAR
+  // =========================================================
+
+  Widget _buildGlassScoreBoard() {
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+
+        borderRadius: BorderRadius.circular(24),
+
+        border: Border.all(
+          color: Colors.white24,
+        ),
+      ),
+
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+
+        children: [
+
+          _columnScore(
+            "Fase",
+            "${controller.state.fase}",
+          ),
+
+          _columnScore(
+            "Tempo",
+            "${tempoRestante}s",
+            color: tempoRestante < 10
+                ? Colors.redAccent
+                : Colors.cyanAccent,
+          ),
+
+          _columnScore(
+            "Pontos",
+            "${controller.state.pontos}",
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _columnScore(
+    String l,
+    String v, {
+    Color color = Colors.white,
+  }) {
+
+    return Column(
+      children: [
+
+        Text(
+          l.toUpperCase(),
+
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10,
+          ),
+        ),
+
+        Text(
+          v,
+
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =========================================================
+  // ÁREA PRINCIPAL
+  // =========================================================
+
   Widget _buildMainArea() {
+
     if (!jogoAtivo) {
+
       return Container(
         padding: const EdgeInsets.all(32),
+
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(32),
+          color: Colors.black.withOpacity(0.8),
+
+          borderRadius: BorderRadius.circular(24),
+
+          border: Border.all(
+            color: Colors.white12,
+          ),
         ),
+
         child: Text(
           mensagem,
+
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
     }
 
     return Column(
       children: [
-        Text(
-          perguntaAtual?.pergunta ?? "",
-          style: const TextStyle(
-            color: Colors.white, fontSize: 80, fontWeight: FontWeight.bold,
-            shadows: [Shadow(color: Colors.black, blurRadius: 25)],
+
+        // PERGUNTA
+        ScaleTransition(
+          scale: Tween(
+            begin: 1.0,
+            end: 1.05,
+          ).animate(_pulseController),
+
+          child: Text(
+            perguntaAtual?.pergunta ?? "",
+
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 60,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+
         const SizedBox(height: 30),
+
+        // CAMPO RESPOSTA
         SizedBox(
-          width: 200,
+          width: 220,
+
           child: TextField(
             controller: respostaController,
+
             focusNode: respostaFocusNode,
+
+            autofocus: true,
+
             keyboardType: TextInputType.number,
+
+            textInputAction: TextInputAction.done,
+
             textAlign: TextAlign.center,
-            autofocus: true, // Já tenta focar ao iniciar
-            showCursor: true,
-            style: const TextStyle(color: Colors.orangeAccent, fontSize: 60, fontWeight: FontWeight.bold),
+
+            style: const TextStyle(
+              color: Colors.orangeAccent,
+              fontSize: 45,
+              fontWeight: FontWeight.bold,
+            ),
+
             decoration: const InputDecoration(
               hintText: "?",
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orangeAccent, width: 5)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orangeAccent, width: 5)),
+
+              hintStyle: TextStyle(
+                color: Colors.white30,
+              ),
+
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: Colors.orangeAccent,
+                  width: 3,
+                ),
+              ),
+
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: Colors.orange,
+                  width: 4,
+                ),
+              ),
             ),
+
+            // 🔥 ENTER CONFIRMA
             onSubmitted: (_) => responder(),
           ),
         ),
@@ -287,26 +552,39 @@ class _JogoScreenState extends State<JogoScreen> with SingleTickerProviderStateM
     );
   }
 
+  // =========================================================
+  // BOTÃO CONFIRMAR
+  // =========================================================
+
   Widget _buildFooterButton() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: jogoAtivo ? 1.0 : 1.0 + (0.04 * _pulseController.value),
-          child: ElevatedButton(
-            onPressed: jogoAtivo ? responder : iniciar,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: jogoAtivo ? Colors.cyanAccent : Colors.orangeAccent,
-              minimumSize: const Size(double.infinity, 75),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            ),
-            child: Text(
-              jogoAtivo ? "CONFIRMAR RESPOSTA" : "INICIAR DESAFIO",
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.black),
-            ),
-          ),
-        );
-      },
+
+    return ElevatedButton(
+      onPressed: responder,
+
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.orangeAccent,
+        foregroundColor: Colors.black,
+
+        minimumSize: const Size(
+          double.infinity,
+          65,
+        ),
+
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+
+        elevation: 10,
+      ),
+
+      child: const Text(
+        "CONFIRMAR",
+
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

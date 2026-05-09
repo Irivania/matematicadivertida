@@ -4,15 +4,6 @@ import '../core/enums/nivel_enum.dart';
 /// ===============================
 /// CONTROLADOR PRINCIPAL DO JOGO
 /// ===============================
-///
-/// Responsável por:
-/// ✅ Pontuação
-/// ✅ Avanço de perguntas
-/// ✅ Avanço de fases
-/// ✅ Avanço de níveis
-/// ✅ Reset de fase
-/// ✅ Reset total
-///
 class GameController {
   final GameState _state = GameState();
 
@@ -22,19 +13,14 @@ class GameController {
   // RESPONDER
   // =========================
   ResultadoResposta responder(bool correto) {
-    // =========================
-    // ACERTOU
-    // =========================
     if (correto) {
       _state.registrarAcerto();
     }
 
-    // Avança pergunta
+    // Avança a contagem de perguntas da fase atual
     _state.avancarPergunta();
 
-    // =========================
-    // FASE COMPLETA?
-    // =========================
+    // Verifica se atingiu a meta de acertos da fase
     if (_state.faseCompleta()) {
       return ResultadoResposta.faseCompleta;
     }
@@ -46,16 +32,10 @@ class GameController {
   // ERRO
   // =========================
   void erro() {
-    // Remove pontos da fase atual
     _state.removerPontosFase();
-
-    // Reinicia progresso da fase
     _state.resetFase();
   }
 
-  // =========================
-  // REINICIAR FASE
-  // =========================
   void reiniciarFase() {
     erro();
   }
@@ -63,42 +43,17 @@ class GameController {
   // =========================
   // PRÓXIMA FASE
   // =========================
-  ///
-  /// 🥉 Bronze -> fases 1 a 10
-  /// 🥈 Prata -> fases 1 a 10
-  /// 🥇 Ouro -> fases 1 a 10
-  /// 💎 Platina -> fases 1 a 10
-  /// 👑 Mestre -> fases 1 a 10
-  ///
-  /// Quando completa fase 10:
-  /// ✅ sobe o nível
-  /// ✅ volta fase para 1
-  ///
   void proximaFase() {
-    // =========================
-    // AINDA TEM FASES NO NÍVEL
-    // =========================
+    // Se ainda não chegou na última fase do nível (ex: fase 10)
     if (_state.fase < _state.fasesPorNivel) {
       _state.fase++;
-
-      // Reinicia perguntas da nova fase
+      _state.resetFase(); // Reseta o contador de perguntas para a nova fase
+    } else {
+      // Se completou a fase 10, sobe o nível (Bronze -> Prata...)
+      _state.subirNivel();
+      _state.fase = 1; // Volta para a fase 1 do novo nível
       _state.resetFase();
-
-      return;
     }
-
-    // =========================
-    // COMPLETOU O NÍVEL
-    // =========================
-
-    // sobe nível
-    _state.subirNivel();
-
-    // volta para fase 1
-    _state.fase = 1;
-
-    // reinicia perguntas
-    _state.resetFase();
   }
 
   // =========================
@@ -108,25 +63,28 @@ class GameController {
     _state.resetJogo();
   }
 
-  // =========================
-  // NOME DO NÍVEL
-  // =========================
+  // =====================================================
+  // NOME DO NÍVEL (Ajustado para o PerguntaService)
+  // =====================================================
+  // Removi os emojis para que o 'switch' do Service funcione sem erros
   String getNomeNivel() {
     switch (_state.nivel) {
-      case Nivel.bronze:
-        return '🥉 Bronze';
+      case Nivel.bronze: return 'Bronze';
+      case Nivel.prata:  return 'Prata';
+      case Nivel.ouro:   return 'Ouro';
+      case Nivel.platina:return 'Platina';
+      case Nivel.mestre: return 'Mestre';
+    }
+  }
 
-      case Nivel.prata:
-        return '🥈 Prata';
-
-      case Nivel.ouro:
-        return '🥇 Ouro';
-
-      case Nivel.platina:
-        return '💎 Platina';
-
-      case Nivel.mestre:
-        return '👑 Mestre';
+  // Nome formatado para mostrar na interface (Com Emojis)
+  String getNomeNivelFormatado() {
+    switch (_state.nivel) {
+      case Nivel.bronze: return '🥉 Bronze';
+      case Nivel.prata:  return '🥈 Prata';
+      case Nivel.ouro:   return '🥇 Ouro';
+      case Nivel.platina:return '💎 Platina';
+      case Nivel.mestre: return '👑 Mestre';
     }
   }
 
@@ -135,20 +93,11 @@ class GameController {
   // =========================
   String getProximoNivelNome() {
     switch (_state.nivel) {
-      case Nivel.bronze:
-        return '🥈 Prata';
-
-      case Nivel.prata:
-        return '🥇 Ouro';
-
-      case Nivel.ouro:
-        return '💎 Platina';
-
-      case Nivel.platina:
-        return '👑 Mestre';
-
-      case Nivel.mestre:
-        return '👑 Mestre';
+      case Nivel.bronze: return 'Prata';
+      case Nivel.prata:  return 'Ouro';
+      case Nivel.ouro:   return 'Platina';
+      case Nivel.platina:return 'Mestre';
+      case Nivel.mestre: return 'Mestre';
     }
   }
 
