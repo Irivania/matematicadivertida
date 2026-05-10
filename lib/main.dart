@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
 import 'routes/app_routes.dart';
 
-// =====================================================
-// TELAS PRINCIPAIS
-// =====================================================
-
+// Telas Principais
 import 'screens/home_screen.dart';
 import 'screens/perfil_screen.dart';
 import 'screens/nivel_screen.dart';
 
-// =====================================================
-// TELAS DE JOGO
-// =====================================================
-
-import 'game/crianca_game.dart';
-import 'game/adulto_game.dart';
-import 'game/professor_game.dart';
+// Jogo Unificado
 import 'game/jogo_screen.dart';
 
 void main() {
@@ -27,33 +18,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return MaterialApp(
-
-      // =================================================
-      // CONFIGURAÇÕES GERAIS
-      // =================================================
-
       title: 'Matemática Divertida',
-
       debugShowCheckedModeBanner: false,
 
       // =================================================
-      // TEMA
+      // TEMA GLOBAL (Material 3)
       // =================================================
-
       theme: ThemeData(
         useMaterial3: true,
-
         fontFamily: 'Roboto',
-
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.orange,
           brightness: Brightness.light,
         ),
-
         scaffoldBackgroundColor: const Color(0xFFFDFDFD),
-
+        
+        // Padronização das AppBars
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
@@ -61,18 +42,14 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.black,
         ),
 
+        // Padronização dos Botões para todo o App
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 14,
-            ),
-
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             textStyle: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
-
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -81,68 +58,31 @@ class MyApp extends StatelessWidget {
       ),
 
       // =================================================
-      // ROTA INICIAL
+      // GERENCIAMENTO DE ROTAS
       // =================================================
-
       initialRoute: AppRoutes.home,
-
-      // =================================================
-      // ROTAS
-      // =================================================
-
       routes: {
+        // Tela inicial de Boas-vindas
+        AppRoutes.home: (context) => const HomeScreen(),
 
-        // =============================================
-        // HOME
-        // =============================================
+        // Seleção de Perfil (Criança, Adulto, Professor)
+        AppRoutes.perfil: (context) => const PerfilScreen(),
 
-        AppRoutes.home: (context) =>
-            const HomeScreen(),
+        // Tela de Nível (Opcional, conforme seu fluxo)
+        AppRoutes.nivel: (context) => const NivelScreen(),
 
-        // =============================================
-        // PERFIL
-        // =============================================
-
-        AppRoutes.perfil: (context) =>
-            const PerfilScreen(),
-
-        // =============================================
-        // NÍVEL
-        // (Pode remover depois se não usar)
-        // =============================================
-
-        AppRoutes.nivel: (context) =>
-            const NivelScreen(),
-
-        // =============================================
-        // JOGO PRINCIPAL
-        // =============================================
-
+        // Jogo Principal Unificado
         AppRoutes.jogo: (context) {
-
-          // 🔥 RECEBE O PERFIL ESCOLHIDO
-          final perfil =
-              ModalRoute.of(context)!
-                  .settings
-                  .arguments as String;
+          // Captura o argumento do perfil enviado pela PerfilScreen
+          final args = ModalRoute.of(context)?.settings.arguments;
+          
+          // Tratamento de segurança: se não vier nada, assume 'crianca'
+          final String perfilEscolhido = (args is String) ? args : 'crianca';
 
           return JogoScreen(
-            perfil: perfil,
+            perfil: perfilEscolhido,
           );
         },
-
-        // =============================================
-        // TELAS ANTIGAS (Opcional)
-        // =============================================
-
-        AppRoutes.crianca: (context) =>
-            const CriancaGame(),
-
-        AppRoutes.adulto: (context) =>
-            const AdultoGame(),
-
-        AppRoutes.professor: (context) =>
-            const ProfessorGame(),
       },
     );
   }

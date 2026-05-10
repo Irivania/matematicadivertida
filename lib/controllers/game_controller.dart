@@ -17,10 +17,10 @@ class GameController {
       _state.registrarAcerto();
     }
 
-    // Avança a contagem de perguntas da fase atual
+    // Avança a contagem de perguntas (tentativas) da fase atual
     _state.avancarPergunta();
 
-    // Verifica se atingiu a meta de acertos da fase
+    // Verifica se atingiu a meta de acertos da fase (ex: acertar 5 de 5)
     if (_state.faseCompleta()) {
       return ResultadoResposta.faseCompleta;
     }
@@ -29,11 +29,11 @@ class GameController {
   }
 
   // =========================
-  // ERRO
+  // GESTÃO DE ERRO
   // =========================
   void erro() {
     _state.removerPontosFase();
-    _state.resetFase();
+    _state.resetFase(); // Reseta o progresso interno da fase atual
   }
 
   void reiniciarFase() {
@@ -41,7 +41,7 @@ class GameController {
   }
 
   // =========================
-  // PRÓXIMA FASE
+  // PRÓXIMA FASE / SUBIR NÍVEL
   // =========================
   void proximaFase() {
     // Se ainda não chegou na última fase do nível (ex: fase 10)
@@ -49,9 +49,9 @@ class GameController {
       _state.fase++;
       _state.resetFase(); // Reseta o contador de perguntas para a nova fase
     } else {
-      // Se completou a fase 10, sobe o nível (Bronze -> Prata...)
+      // Se completou a última fase, sobe o nível (Bronze -> Prata...)
       _state.subirNivel();
-      _state.fase = 1; // Volta para a fase 1 do novo nível
+      _state.fase = 1; // Reinicia na fase 1 do novo nível
       _state.resetFase();
     }
   }
@@ -64,53 +64,54 @@ class GameController {
   }
 
   // =====================================================
-  // NOME DO NÍVEL (Ajustado para o PerguntaService)
+  // NOMES DOS NÍVEIS (Integração com Service e UI)
   // =====================================================
-  // Removi os emojis para que o 'switch' do Service funcione sem erros
+
+  /// Retorna apenas o nome puro para o 'switch' do PerguntaService
   String getNomeNivel() {
     switch (_state.nivel) {
-      case Nivel.bronze: return 'Bronze';
-      case Nivel.prata:  return 'Prata';
-      case Nivel.ouro:   return 'Ouro';
-      case Nivel.platina:return 'Platina';
-      case Nivel.mestre: return 'Mestre';
+      case Nivel.bronze:  return 'Bronze';
+      case Nivel.prata:   return 'Prata';
+      case Nivel.ouro:    return 'Ouro';
+      case Nivel.platina: return 'Platina';
+      case Nivel.mestre:  return 'Mestre';
     }
   }
 
-  // Nome formatado para mostrar na interface (Com Emojis)
+  /// Retorna o nome decorado para exibir na interface do usuário (HUD)
   String getNomeNivelFormatado() {
     switch (_state.nivel) {
-      case Nivel.bronze: return '🥉 Bronze';
-      case Nivel.prata:  return '🥈 Prata';
-      case Nivel.ouro:   return '🥇 Ouro';
-      case Nivel.platina:return '💎 Platina';
-      case Nivel.mestre: return '👑 Mestre';
+      case Nivel.bronze:  return '🥉 Bronze';
+      case Nivel.prata:   return '🥈 Prata';
+      case Nivel.ouro:    return '🥇 Ouro';
+      case Nivel.platina: return '💎 Platina';
+      case Nivel.mestre:  return '👑 Mestre';
     }
   }
 
-  // =========================
-  // PRÓXIMO NÍVEL
-  // =========================
+  /// Auxiliar para mostrar qual o próximo desafio ao usuário
   String getProximoNivelNome() {
     switch (_state.nivel) {
-      case Nivel.bronze: return 'Prata';
-      case Nivel.prata:  return 'Ouro';
-      case Nivel.ouro:   return 'Platina';
-      case Nivel.platina:return 'Mestre';
-      case Nivel.mestre: return 'Mestre';
+      case Nivel.bronze:  return 'Prata';
+      case Nivel.prata:   return 'Ouro';
+      case Nivel.ouro:    return 'Platina';
+      case Nivel.platina: return 'Mestre';
+      case Nivel.mestre:  return 'Mestre Máximo';
     }
   }
 
   // =========================
-  // COMPLETOU O NÍVEL?
+  // STATUS DE PROGRESSO
   // =========================
+  
+  /// Verifica se o jogador terminou todas as fases do nível atual
   bool completouNivel() {
     return _state.fase >= _state.fasesPorNivel;
   }
 }
 
 /// ===============================
-/// RESULTADO DA RESPOSTA
+/// ENUM DE RESULTADO
 /// ===============================
 enum ResultadoResposta {
   faseCompleta,

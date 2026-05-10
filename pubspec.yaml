@@ -15,6 +15,9 @@ dependencies:
   # 🔊 Áudio para efeitos sonoros e trilha
   audioplayers: ^6.6.0
 
+  # 💾 Persistência de dados para salvar recordes (ADICIONE ESTA LINHA)
+  shared_preferences: ^2.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -24,19 +27,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # ==========================================================
-  # 🖼️ ATIVOS (Imagens, Sons e Ícones)
-  # ==========================================================
   assets:
-    # Registra toda a pasta de imagens, incluindo os 3 perfis
     - assets/images/
-    # Se você for usar sons futuramente, basta criar a pasta e descomentar:
-    # - assets/audio/
-
-  # ==========================================================
-  # 🔤 FONTES (Opcional)
-  # ==========================================================
-  # fonts:
-  #   - family: GameFont
-  #     fonts:
-  #       - asset: assets/fonts/PressStart2P-Regular.ttf

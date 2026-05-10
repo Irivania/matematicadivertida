@@ -6,140 +6,72 @@ class PerfilScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final largura = MediaQuery.of(context).size.width;
+    final alturaTela = MediaQuery.of(context).size.height;
+
+    int colunas = 4;
+    if (largura < 1200) colunas = 2;
+    if (largura < 700) colunas = 1;
 
     return Scaffold(
-
-      // =====================================================
-      // APPBAR
-      // =====================================================
-
-      appBar: AppBar(
-        title: const Text("Matemática Divertida"),
-        centerTitle: true,
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-      ),
-
-      // =====================================================
-      // BODY
-      // =====================================================
-
+      backgroundColor: const Color(0xFF0A0E21),
       body: Stack(
         children: [
-
-          // =================================================
-          // FUNDO
-          // =================================================
-
           Positioned.fill(
             child: Image.asset(
-              'assets/images/fundo_perfil.png',
+              'assets/images/fundo_imagem_perfil.png',
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
-
-          // Overlay escuro
-          Positioned.fill(
-            child: Container(
-              color: Colors.black.withOpacity(0.45),
-            ),
-          ),
-
-          // =================================================
-          // CONTEÚDO
-          // =================================================
-
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 8,
-              ),
-
-              child: Column(
-                children: [
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    "ESCOLHA O PERFIL",
-
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+            child: SizedBox(
+              width: largura,
+              height: alturaTela,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 340),
+                      const Text(
+                        "ESCOLHA O PERFIL",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2.5,
+                          shadows: [
+                            Shadow(blurRadius: 15, color: Colors.black, offset: Offset(0, 5)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1000),
+                          child: GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: colunas,
+                            childAspectRatio: 0.68,
+                            crossAxisSpacing: 25,
+                            mainAxisSpacing: 25,
+                            children: [
+                              _CardPerfilAnimado(perfil: "crianca", imagem: "assets/images/menino.png", neonColor: const Color(0xFFFFD700)),
+                              _CardPerfilAnimado(perfil: "crianca", imagem: "assets/images/menina.png", neonColor: const Color(0xFFC040FF)),
+                              _CardPerfilAnimado(perfil: "adulto", imagem: "assets/images/adulto1.png", neonColor: const Color(0xFF00CFFF)),
+                              _CardPerfilAnimado(perfil: "professor", imagem: "assets/images/professor1.png", neonColor: const Color(0xFF39FF14)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 80),
+                    ],
                   ),
-
-                  const SizedBox(height: 18),
-
-                  // =========================================
-                  // GRID ESTILO NETFLIX
-                  // =========================================
-
-                  Expanded(
-                    child: GridView.count(
-
-                      // 2 cards por linha
-                      crossAxisCount: 2,
-
-                      // 🔥 CARDS MENORES
-                      childAspectRatio: 1.15,
-
-                      // 🔥 ESPAÇAMENTO MENOR
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-
-                      children: [
-
-                        // =====================================
-                        // MENINO
-                        // =====================================
-
-                        _cardPerfil(
-                          context,
-                          nome: "MENINO",
-                          perfil: "crianca",
-                          imagem: "assets/images/menino.jpeg",
-                        ),
-
-                        // =====================================
-                        // MENINA
-                        // =====================================
-
-                        _cardPerfil(
-                          context,
-                          nome: "MENINA",
-                          perfil: "crianca",
-                          imagem: "assets/images/menina.jpeg",
-                        ),
-
-                        // =====================================
-                        // ADULTO
-                        // =====================================
-
-                        _cardPerfil(
-                          context,
-                          nome: "ADULTO",
-                          perfil: "adulto",
-                          imagem: "assets/images/adulto1.jpeg",
-                        ),
-
-                        // =====================================
-                        // PROFESSOR
-                        // =====================================
-
-                        _cardPerfil(
-                          context,
-                          nome: "PROFESSOR",
-                          perfil: "professor",
-                          imagem: "assets/images/professor1.png",
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -147,119 +79,83 @@ class PerfilScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  // =========================================================
-  // CARD PERFIL
-  // =========================================================
+// Transformamos o Card em um StatefulWidget para gerenciar o estado do Hover
+class _CardPerfilAnimado extends StatefulWidget {
+  final String perfil;
+  final String imagem;
+  final Color neonColor;
 
-  Widget _cardPerfil(
-    BuildContext context, {
-    required String nome,
-    required String perfil,
-    required String imagem,
-  }) {
+  const _CardPerfilAnimado({
+    required this.perfil,
+    required this.imagem,
+    required this.neonColor,
+  });
 
-    return GestureDetector(
+  @override
+  State<_CardPerfilAnimado> createState() => _CardPerfilAnimadoState();
+}
 
-      onTap: () {
+class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
+  double _escala = 1.0; // Escala padrão
 
-        Navigator.pushNamed(
-          context,
-          AppRoutes.jogo,
-          arguments: perfil,
-        );
-      },
-
-      child: Container(
-
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      // Quando o mouse entra, aumenta a escala em 5%
+      onEnter: (_) => setState(() => _escala = 1.05),
+      // Quando o mouse sai, volta ao tamanho original
+      onExit: (_) => setState(() => _escala = 1.0),
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.jogo, arguments: widget.perfil),
+        child: AnimatedScale(
+          scale: _escala,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack, // Efeito leve de "mola" ao crescer
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: widget.neonColor, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.neonColor.withOpacity(0.4),
+                  blurRadius: _escala > 1.0 ? 25 : 15, // Brilha mais no hover
+                  spreadRadius: _escala > 1.0 ? 2 : 1,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-
-          child: Stack(
-            children: [
-
-              // =============================================
-              // IMAGEM
-              // =============================================
-
-              Positioned.fill(
-                child: Image.asset(
-                  imagem,
-                  fit: BoxFit.cover,
-                ),
-              ),
-
-              // =============================================
-              // OVERLAY
-              // =============================================
-
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.8),
-                      ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(19),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(widget.imagem, fit: BoxFit.cover, alignment: Alignment.topCenter),
+                  ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            widget.neonColor.withOpacity(0.15),
+                            Colors.transparent,
+                            widget.neonColor.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-
-              // =============================================
-              // TEXTO
-              // =============================================
-
-              Positioned(
-                bottom: 8,
-                left: 8,
-                right: 8,
-
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 6,
-                  ),
-
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-
-                    borderRadius: BorderRadius.circular(10),
-
-                    border: Border.all(
-                      color: Colors.white24,
-                    ),
-                  ),
-
-                  child: Text(
-                    nome,
-
-                    textAlign: TextAlign.center,
-
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
