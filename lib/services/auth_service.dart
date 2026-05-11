@@ -6,29 +6,34 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Ajustado: Instância com escopos explícitos para evitar erros de construtor
+  // REFORÇO: ClientId inserido diretamente para evitar falhas no Flutter Web
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: '5577210485-0ul1lhb99g08rsq15kk0v4r6uf54vkg8.apps.googleusercontent.com',
     scopes: [
       'email',
       'https://www.googleapis.com/auth/userinfo.profile',
     ],
   );
 
-  // 1. Login com Google
+  // 1. Login com Google (Ajustado para lidar com o tempo de resposta do celular)
   Future<bool> entrarComGoogle() async {
     try {
-      // Inicia o processo de login no navegador/janela
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Tenta primeiro o login silencioso (caso o usuário já tenha logado antes)
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+      
+      // Se não houver sessão ativa, abre o pop-up
+      googleUser ??= await _googleSignIn.signIn();
 
       if (googleUser == null) {
-        print("Login cancelado pelo usuário.");
+        print("Login cancelado: O usuário fechou a janela ou o tempo expirou.");
         return false;
       }
 
-      // Obtém os tokens de autenticação
+      // Pequena pausa técnica: Dá tempo ao navegador para processar o retorno do celular
+      await Future.delayed(const Duration(milliseconds: 500));
+
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // Cria a credencial para o Firebase usando os tokens obtidos
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -39,8 +44,7 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
-        // Salva ou atualiza os dados básicos no Firestore
-        // SetOptions(merge: true) impede que o campo 'perfil' seja apagado ao relogar
+        // Grava no Firestore (SetOptions permite atualizar sem apagar dados antigos)
         await _firestore.collection('usuarios').doc(user.uid).set({
           'uid': user.uid,
           'nome': user.displayName ?? "Jogador",
@@ -49,30 +53,30 @@ class AuthService {
           'data_ultima_entrada': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
+        print("Usuário autenticado com sucesso: ${user.displayName}");
         return true;
       }
       return false;
     } catch (e) {
-      print("Erro detalhado no AuthService (Google): $e");
+      print("ERRO DETALHADO NO LOGIN: $e");
       return false;
     }
   }
 
-  // 2. Atualiza o Perfil (Chamada na PerfilScreen após o login)
+  // 2. Atualiza o Perfil (Professor ou Aluno)
   Future<void> atualizarPerfilUsuario(String perfilEscolhido) async {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
-        // Define se é professor ou aluno com base na escolha do Card
         String tipoConta = (perfilEscolhido == 'professor') ? 'professor' : 'aluno';
 
         await _firestore.collection('usuarios').doc(user.uid).update({
           'perfil': perfilEscolhido,
           'tipo': tipoConta,
-          // Garante que o campo de pontuação existe sem resetar se já houver valor
+          // FieldValue.increment(0) garante que o campo exista sem resetar a pontuação
           'pontuacao_total': FieldValue.increment(0),
         });
-        print("Perfil salvo: $perfilEscolhido como $tipoConta");
+        print("Perfil atualizado: $perfilEscolhido");
       }
     } catch (e) {
       print("Erro ao salvar perfil no Firestore: $e");
@@ -85,7 +89,7 @@ class AuthService {
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();
-      print("Usuário desconectado com sucesso.");
+      print("Usuário desconectado.");
     } catch (e) {
       print("Erro ao sair: $e");
     }
