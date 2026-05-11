@@ -10,48 +10,67 @@ class GameController {
   GameState get state => _state;
 
   // =========================
-  // RESPONDER
+  // RESPONDER (Lógica customizada por perfil)
   // =========================
-  ResultadoResposta responder(bool correto) {
+  ResultadoResposta responder(bool correto, String perfil) {
+    final String p = perfil.toLowerCase().trim();
+
     if (correto) {
+      // 1. REGISTRA O ACERTO NO ESTADO
       _state.registrarAcerto();
+
+      // 2. CALCULA PONTUAÇÃO POR PERFIL
+      if (p == 'crianca') {
+        // SUGESTÃO COMBO: 10, 20, 30, 40... conforme a pergunta atual na fase
+        int combo = (_state.perguntaAtual + 1) * 10;
+        _state.pontos += combo;
+      } else {
+        // Adulto e Professor ganham fixo (ou você pode manter 10)
+        _state.pontos += 10;
+      }
+
+      // Avança a contagem de perguntas da fase
+      _state.avancarPergunta();
+
+      // Verifica se atingiu a meta de acertos da fase
+      if (_state.faseCompleta()) {
+        return ResultadoResposta.faseCompleta;
+      }
+      return ResultadoResposta.continuar;
+      
+    } else {
+      // --- LÓGICA DE ERRO ---
+      
+      if (p == 'adulto' || p == 'professor') {
+        // PENALIDADE: Perda de pontos real para perfis experientes
+        _state.pontos -= 15;
+        if (_state.pontos < 0) _state.pontos = 0;
+      }
+
+      // Reinicia o progresso da fase atual (obrigando a refazer)
+      _state.resetFase(); 
+      return ResultadoResposta.continuar;
     }
-
-    // Avança a contagem de perguntas (tentativas) da fase atual
-    _state.avancarPergunta();
-
-    // Verifica se atingiu a meta de acertos da fase (ex: acertar 5 de 5)
-    if (_state.faseCompleta()) {
-      return ResultadoResposta.faseCompleta;
-    }
-
-    return ResultadoResposta.continuar;
   }
 
   // =========================
-  // GESTÃO DE ERRO
+  // GESTÃO DE ERRO / REINICIO
   // =========================
-  void erro() {
-    _state.removerPontosFase();
-    _state.resetFase(); // Reseta o progresso interno da fase atual
-  }
-
+  
   void reiniciarFase() {
-    erro();
+    _state.resetFase();
   }
 
   // =========================
   // PRÓXIMA FASE / SUBIR NÍVEL
   // =========================
   void proximaFase() {
-    // Se ainda não chegou na última fase do nível (ex: fase 10)
     if (_state.fase < _state.fasesPorNivel) {
       _state.fase++;
-      _state.resetFase(); // Reseta o contador de perguntas para a nova fase
+      _state.resetFase(); 
     } else {
-      // Se completou a última fase, sobe o nível (Bronze -> Prata...)
       _state.subirNivel();
-      _state.fase = 1; // Reinicia na fase 1 do novo nível
+      _state.fase = 1; 
       _state.resetFase();
     }
   }
@@ -64,10 +83,9 @@ class GameController {
   }
 
   // =====================================================
-  // NOMES DOS NÍVEIS (Integração com Service e UI)
+  // NOMES DOS NÍVEIS
   // =====================================================
 
-  /// Retorna apenas o nome puro para o 'switch' do PerguntaService
   String getNomeNivel() {
     switch (_state.nivel) {
       case Nivel.bronze:  return 'Bronze';
@@ -78,7 +96,6 @@ class GameController {
     }
   }
 
-  /// Retorna o nome decorado para exibir na interface do usuário (HUD)
   String getNomeNivelFormatado() {
     switch (_state.nivel) {
       case Nivel.bronze:  return '🥉 Bronze';
@@ -88,31 +105,8 @@ class GameController {
       case Nivel.mestre:  return '👑 Mestre';
     }
   }
-
-  /// Auxiliar para mostrar qual o próximo desafio ao usuário
-  String getProximoNivelNome() {
-    switch (_state.nivel) {
-      case Nivel.bronze:  return 'Prata';
-      case Nivel.prata:   return 'Ouro';
-      case Nivel.ouro:    return 'Platina';
-      case Nivel.platina: return 'Mestre';
-      case Nivel.mestre:  return 'Mestre Máximo';
-    }
-  }
-
-  // =========================
-  // STATUS DE PROGRESSO
-  // =========================
-  
-  /// Verifica se o jogador terminou todas as fases do nível atual
-  bool completouNivel() {
-    return _state.fase >= _state.fasesPorNivel;
-  }
 }
 
-/// ===============================
-/// ENUM DE RESULTADO
-/// ===============================
 enum ResultadoResposta {
   faseCompleta,
   continuar,

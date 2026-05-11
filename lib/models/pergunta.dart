@@ -1,13 +1,13 @@
 class Pergunta {
   final String pergunta;
   final String resposta;
-  final List<String>? opcoes;
   final String tipo;
+  final String dica; // <-- Novo campo
 
-  const Pergunta({
+  Pergunta({
     required this.pergunta,
     required this.resposta,
-    this.opcoes,
     required this.tipo,
+    required this.dica, // <-- Inclua no construtor
   });
 }
