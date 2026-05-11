@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "5577210485",
+    "project_id": "matematica-divertida-b285a",
+    "storage_bucket": "matematica-divertida-b285a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:5577210485:android:0eadd0b190a031d01d963c",
+        "android_client_info": {
+          "package_name": "com.example.matematicadivertida"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAs5vmQlPeB0lkjJMC3084Sm-YkgpH17rQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

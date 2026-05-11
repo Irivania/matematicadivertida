@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.5
+  sdk: '>=3.0.0 <4.0.0' # Versão mais compatível para garantir estabilidade
 
 dependencies:
   flutter:
@@ -13,16 +13,24 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # 🔊 Áudio para efeitos sonoros e trilha
-  audioplayers: ^6.6.0
+  audioplayers: ^6.1.0
 
-  # 💾 Persistência de dados para salvar recordes (ADICIONE ESTA LINHA)
+  # 💾 Persistência de dados local
   shared_preferences: ^2.2.2
+
+  # 🔥 Firebase (Versões testadas para trabalharem juntas)
+  firebase_core: ^3.1.1
+  firebase_auth: ^5.1.2
+  cloud_firestore: ^5.0.2
+  google_sign_in: ^6.2.1
+  
+  # 🏁 Utilidades
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
