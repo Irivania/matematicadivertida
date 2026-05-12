@@ -298,8 +298,8 @@ class _JogoScreenState extends State<JogoScreen>
 
   Widget _buildMascoteCal(bool ehCrianca) {
     return Positioned(
-      bottom: ehCrianca ? 190 : 100,
-      right: ehCrianca ? 80 : 20,
+      bottom: ehCrianca ? 1170 : 100,
+      right: ehCrianca ? 708 : 20,
       child: GestureDetector(
         onTap: _exibirAjudaDoCal,
         child: Column(
