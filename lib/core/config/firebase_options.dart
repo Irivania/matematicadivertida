@@ -27,7 +27,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCz4iH5fKFHmeBHhaScAN9SLTRJNJZNXwk',
+    apiKey: 'AIzaSyCz4iH5fKFHmeBHhaScAN9SlTRJNJZNxwk',
     appId: '1:5577210485:web:00bfb033bbdc2ee11d963c',
     messagingSenderId: '5577210485',
     projectId: 'matematica-divertida-b285a',

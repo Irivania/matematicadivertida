@@ -11,7 +11,7 @@ class PerfilScreen extends StatelessWidget {
     final largura = MediaQuery.of(context).size.width;
     final alturaTela = MediaQuery.of(context).size.height;
 
-    // Lógica de responsividade para as colunas
+    // Lógica de colunas
     int colunas = 4;
     if (largura < 1200) colunas = 2;
     if (largura < 700) colunas = 1;
@@ -39,54 +39,62 @@ class PerfilScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Column(
                     children: [
-                      const SizedBox(height: 100), // Ajustado para visibilidade melhor
+                      // AJUSTE: Aumentado para 360 para baixar mais 15% na tela
+                      const SizedBox(height: 360), 
+
                       const Text(
                         "ESCOLHA O PERFIL",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 26,
+                          fontSize: 20, 
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2.5,
                           shadows: [
                             Shadow(
                               blurRadius: 15, 
                               color: AppColors.neonCiano, 
-                              offset: Offset(0, 0)
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      
+                      const SizedBox(height: 25),
                       
                       Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1000),
+                          // AJUSTE: Diminuído para 880 para os cards ficarem menores e "normais"
+                          constraints: const BoxConstraints(maxWidth: 880), 
                           child: GridView.count(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             crossAxisCount: colunas,
-                            childAspectRatio: 0.68,
-                            crossAxisSpacing: 25,
-                            mainAxisSpacing: 25,
+                            // Mantido em 0.65 para formato de "carta" sem cortes
+                            childAspectRatio: 0.65, 
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
                             children: [
                               _CardPerfilAnimado(
-                                perfil: "menino", 
+                                labelExibicao: "MENINO",
+                                perfilLogico: "crianca", 
                                 imagem: "assets/images/menino.png", 
                                 neonColor: const Color(0xFFFFD700)
                               ),
                               _CardPerfilAnimado(
-                                perfil: "menina", 
+                                labelExibicao: "MENINA",
+                                perfilLogico: "crianca", 
                                 imagem: "assets/images/menina.png", 
                                 neonColor: const Color(0xFFC040FF)
                               ),
                               _CardPerfilAnimado(
-                                perfil: "adulto", 
+                                labelExibicao: "ADULTO",
+                                perfilLogico: "adulto", 
                                 imagem: "assets/images/adulto1.png", 
                                 neonColor: AppColors.neonCiano
                               ),
                               _CardPerfilAnimado(
-                                perfil: "professor", 
+                                labelExibicao: "PROFESSOR",
+                                perfilLogico: "professor", 
                                 imagem: "assets/images/professor1.png", 
                                 neonColor: AppColors.neonVerde
                               ),
@@ -94,7 +102,8 @@ class PerfilScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 80),
+                      // Espaço extra para garantir que o scroll funcione se a tela for pequena
+                      const SizedBox(height: 100), 
                     ],
                   ),
                 ),
@@ -108,12 +117,14 @@ class PerfilScreen extends StatelessWidget {
 }
 
 class _CardPerfilAnimado extends StatefulWidget {
-  final String perfil;
+  final String labelExibicao;
+  final String perfilLogico;
   final String imagem;
   final Color neonColor;
 
   const _CardPerfilAnimado({
-    required this.perfil,
+    required this.labelExibicao,
+    required this.perfilLogico,
     required this.imagem,
     required this.neonColor,
   });
@@ -126,9 +137,7 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
   double _escala = 1.0;
   final AuthService _authService = AuthService();
 
-  // Função que salva no Firebase e navega
   void _selecionarPerfil() async {
-    // Mostra um loading neon enquanto salva no Firestore
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -137,17 +146,14 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
       ),
     );
 
-    // Salva a escolha no Firebase vinculada ao ID único do usuário
-    await _authService.atualizarPerfilUsuario(widget.perfil);
-
-    if (mounted) {
-      Navigator.pop(context); // Fecha o loading
-      // Navega para a tela de jogo passando o perfil como argumento
-      Navigator.pushNamed(
-        context, 
-        AppRoutes.jogo, 
-        arguments: widget.perfil
-      );
+    try {
+      await _authService.atualizarPerfilUsuario(widget.perfilLogico);
+      if (mounted) {
+        Navigator.pop(context); 
+        Navigator.pushNamed(context, AppRoutes.jogo, arguments: widget.perfilLogico);
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -165,47 +171,25 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
           curve: Curves.easeOutBack,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: widget.neonColor, width: 3),
+              borderRadius: BorderRadius.circular(18), 
+              border: Border.all(color: widget.neonColor, width: 2.5),
               boxShadow: [
                 BoxShadow(
-                  color: widget.neonColor.withOpacity(0.4),
-                  blurRadius: _escala > 1.0 ? 25 : 15,
-                  spreadRadius: _escala > 1.0 ? 2 : 1,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 10,
-                  offset: const Offset(0, 8),
+                  color: widget.neonColor.withOpacity(0.35),
+                  blurRadius: _escala > 1.0 ? 18 : 12,
+                  spreadRadius: 1,
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(19),
+              borderRadius: BorderRadius.circular(15),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      widget.imagem, 
-                      fit: BoxFit.cover, 
-                      alignment: Alignment.topCenter
-                    ),
-                  ),
-                  // Gradiente Neon interno para dar profundidade
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            widget.neonColor.withOpacity(0.15),
-                            Colors.transparent,
-                            widget.neonColor.withOpacity(0.1),
-                          ],
-                        ),
-                      ),
-                    ),
+                  Image.asset(
+                    widget.imagem, 
+                    fit: BoxFit.cover, 
+                    alignment: Alignment.topCenter
                   ),
                 ],
               ),

@@ -221,7 +221,7 @@ class _JogoScreenState extends State<JogoScreen>
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                     child: const Text(
-                      "ENTENDI! [ENTER]",
+                      "ENTENDI!",
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -298,8 +298,8 @@ class _JogoScreenState extends State<JogoScreen>
 
   Widget _buildMascoteCal(bool ehCrianca) {
     return Positioned(
-      bottom: ehCrianca ? 130 : 100,
-      right: ehCrianca ? 10 : 20,
+      bottom: ehCrianca ? 190 : 100,
+      right: ehCrianca ? 80 : 20,
       child: GestureDetector(
         onTap: _exibirAjudaDoCal,
         child: Column(
