@@ -1,3 +1,5 @@
+// lib/data/services/auth_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -8,36 +10,34 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Em 2026, usamos variáveis de ambiente ou o GoogleService-Info.plist/json
+  // para gerenciar ClientIDs, evitando hardcoding.
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '5577210485-0ul1lhb99g08rsq15kk0v4r6uf54vkg8.apps.googleusercontent.com',
-    scopes: ['email', 'https://www.googleapis.com/auth/userinfo.profile'],
+    scopes: ['email', 'profile'],
   );
 
   Stream<User?> get usuarioStatus => _auth.authStateChanges();
   User? get usuarioAtual => _auth.currentUser;
 
-  /// NOVO MÉTODO: Resolve o erro do AuthController
-  /// Realiza o login anônimo para permitir que o usuário jogue sem Google de imediato
+  /// Login Anônimo com identificação de hardware (opcional para evitar spam)
   Future<UserCredential?> entrarNoJogo() async {
     try {
       final UserCredential userCredential = await _auth.signInAnonymously();
       
       if (userCredential.user != null) {
-        await _syncUserToFirestore(userCredential.user!);
+        // Inicializa apenas dados básicos. Privilégios são via Security Rules.
+        await _initializeUserRecord(userCredential.user!);
       }
       return userCredential;
-    } catch (e) {
-      debugPrint('Erro ao entrar no jogo (Anônimo): $e');
-      return null;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Erro Autenticação Anônima: ${e.code}');
+      rethrow;
     }
-  }
-
-  Future<UserCredential?> entrarComGoogleCredential(AuthCredential credential) async {
-    return await _auth.signInWithCredential(credential);
   }
 
   Future<UserCredential?> entrarComGoogle() async {
     try {
+      // No Web, garantir que o estado anterior não interfira
       if (kIsWeb) await _googleSignIn.signOut();
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -50,48 +50,60 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential? userCredential = await entrarComGoogleCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
       
-      if (userCredential?.user != null) {
-        await _syncUserToFirestore(userCredential!.user!);
+      if (userCredential.user != null) {
+        await _initializeUserRecord(userCredential.user!);
       }
       return userCredential;
     } catch (e) {
-      debugPrint('Erro no Login Google: $e');
-      rethrow;
+      debugPrint('Falha Crítica no Login Google: $e');
+      rethrow; 
     }
   }
 
-  Future<void> _syncUserToFirestore(User user) async {
+  /// Inicialização Segura: Usa merge para não sobrescrever dados sensíveis
+  /// que podem ter sido definidos via Admin SDK ou Cloud Functions.
+  Future<void> _initializeUserRecord(User user) async {
     final userRef = _firestore.collection(AppConstants.colUsuarios).doc(user.uid);
+    
+    // Usamos serverTimestamp() para evitar fraudes de horário local do celular
     await userRef.set({
       'uid': user.uid,
-      'email': user.email ?? 'anonimo@jogo.com',
-      'nome': user.displayName ?? 'Jogador Visitante',
-      'fotoUrl': user.photoURL,
-      'data_ultima_entrada': FieldValue.serverTimestamp(),
+      'email': user.email,
+      'is_anonymous': user.isAnonymous,
+      'metadata': {
+        'last_login': FieldValue.serverTimestamp(),
+        'created_at': FieldValue.serverTimestamp(), // Firestore Rules impedirão alteração posterior
+      }
     }, SetOptions(merge: true));
   }
 
   Future<void> atualizarPerfilUsuario(String perfilEscolhido) async {
     final User? user = _auth.currentUser;
-    if (user == null) throw Exception("Sessão expirada.");
+    if (user == null) throw Exception("Sessão inválida.");
 
-    final String tipoConta = (perfilEscolhido == 'professor') ? 'professor' : 'aluno';
+    // Validação de Domínio no Service
+    final allowedProfiles = ['aluno', 'professor'];
+    if (!allowedProfiles.contains(perfilEscolhido)) {
+      throw Exception("Perfil inválido.");
+    }
 
     await _firestore.collection(AppConstants.colUsuarios).doc(user.uid).update({
       'perfil': perfilEscolhido,
-      'tipo': tipoConta,
-      'atualizado_em': FieldValue.serverTimestamp(),
-      'fase_atual': FieldValue.increment(0),
-      'nivel_atual': "Bronze", 
+      'config': {
+        'atualizado_em': FieldValue.serverTimestamp(),
+        'setup_complete': true,
+      }
     });
   }
 
   Future<void> sair() async {
     try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
-    await _auth.signOut();
+      if (!kIsWeb) await _googleSignIn.signOut();
+      await _auth.signOut();
+    } catch (e) {
+      debugPrint('Erro ao encerrar sessão: $e');
+    }
   }
 }

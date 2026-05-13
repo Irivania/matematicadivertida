@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:matematicadivertida/core/enums/nivel_enum.dart';
-import 'package:matematicadivertida/core/enums/nivel_ext.dart'; // Garante acesso a .icone, .label e .multiplicadorXP
 import 'package:matematicadivertida/core/config/estrutura_pedagogica.dart';
+import 'package:matematicadivertida/domain/entities/game_session_entity.dart';
+import 'package:matematicadivertida/domain/entities/pergunta_entity.dart';
+import 'package:matematicadivertida/domain/usecases/calcular_pontuacao_use_case.dart';
 
-/// [GameState] gerencia o estado reativo do jogo.
 class GameState extends ChangeNotifier {
-  
+  // Injeção de dependência do Caso de Uso
+  final _calcularPontuacao = CalcularPontuacaoUseCase();
+
   // ---------------------------------------------------
-  // PROPRIEDADES NATIVAS (ESTADO)
+  // ESTADO DO JOGO (INTEGRADO COM ENTIDADES)
   // ---------------------------------------------------
   int faseAtual = 1;
   int perguntaAtual = 1; 
@@ -15,59 +18,46 @@ class GameState extends ChangeNotifier {
   int acertosNaFase = 0;
   int errosNaFase = 0;
   int vidas = 3; 
-  int pontosAcumuladosFase = 0;
   Nivel nivelAtual = Nivel.bronze;
   String perfil = "crianca";
 
   // ---------------------------------------------------
-  // ALIASES PARA COMPATIBILIDADE (RESOLVE ERROS DE UI)
+  // ALIASES E GETTERS (RESOLVE UI & COMPATIBILIDADE)
   // ---------------------------------------------------
-  
-  /// Resolve o erro: 'indicePerguntaAtual' isn't defined
   int get indicePerguntaAtual => perguntaAtual;
-
-  /// Resolve o erro: 'nivel' isn't defined no GameHUD
   String get nivel => nivelAtual.label;
-
-  /// Resolve o erro: 'fase' isn't defined no GameHUD
   int get fase => faseAtual;
-
-  /// Alias para xpTotal se algum widget ainda chamar 'pontos'
   int get pontos => xpTotal;
-  set pontos(int valor) {
-    xpTotal = valor;
-    notifyListeners();
-  }
-
-  // ---------------------------------------------------
-  // GETTERS DE CONFIGURAÇÃO & UI
-  // ---------------------------------------------------
+  
   int get maxPerguntasPorFase => EstruturaProgresso.perguntasPorFase;
   int get maxFasesPorNivel => EstruturaProgresso.fasesPorNivel;
-  
-  String get perfilUsuario => perfil;
-  int get acertos => acertosNaFase;
-  int get erros => errosNaFase;
 
-  /// Retorna string formatada: "🥉 Bronze"
   String get nomeNivelExibicao => "${nivelAtual.icone} ${nivelAtual.label}";
   
-  /// Formata o nome para o banco de dados (ex: "Bronze")
+  // Converte o Enum Nivel para a dificuldade esperada pelo UseCase/Service
+  Dificuldade get dificuldadeTecnica {
+    if (nivelAtual == Nivel.bronze) return Dificuldade.facil;
+    if (nivelAtual == Nivel.prata) return Dificuldade.medio;
+    return Dificuldade.dificil;
+  }
+
   String get nivelParaService => nivelAtual.name[0].toUpperCase() + nivelAtual.name.substring(1);
 
   // ---------------------------------------------------
   // MÉTODOS DE LÓGICA DE JOGO
   // ---------------------------------------------------
 
-  void registrarAcerto() {
+  void registrarAcerto({int tempoRestante = 0}) {
     acertosNaFase++;
     
-    // Cálculo baseado no multiplicador de XP definido na extensão do Enum
-    int pontosGanhos = (10 * nivelAtual.multiplicadorXP).toInt();
+    // DELEGAÇÃO: A lógica de pontos agora vem do UseCase de Domínio
+    final pontosGanhos = _calcularPontuacao.executar(
+      acertos: 1, // Pontuamos por acerto individual
+      dificuldade: dificuldadeTecnica,
+      tempoRestante: tempoRestante,
+    );
     
     xpTotal += pontosGanhos;
-    pontosAcumuladosFase += pontosGanhos;
-    
     notifyListeners(); 
   }
 
@@ -89,12 +79,7 @@ class GameState extends ChangeNotifier {
     acertosNaFase = 0;
     errosNaFase = 0;
     vidas = 3;
-    
-    // Penalidade: perde o que ganhou apenas na fase atual
-    xpTotal -= pontosAcumuladosFase;
-    if (xpTotal < 0) xpTotal = 0;
-    
-    pontosAcumuladosFase = 0;
+    // Opcional: Implementar lógica de perda de XP por reset se desejado
     notifyListeners();
   }
 
@@ -102,28 +87,20 @@ class GameState extends ChangeNotifier {
     if (faseAtual < maxFasesPorNivel) {
       faseAtual++;
     } else {
-      subirNivel();
+      _subirNivel();
       faseAtual = 1;
     }
-    
-    perguntaAtual = 1;
-    acertosNaFase = 0;
-    errosNaFase = 0;
-    vidas = 3;
-    pontosAcumuladosFase = 0;
-    
-    notifyListeners();
+    resetFase();
   }
 
-  void subirNivel() {
+  void _subirNivel() {
     nivelAtual = switch (nivelAtual) {
       Nivel.bronze  => Nivel.prata,
       Nivel.prata   => Nivel.ouro,
       Nivel.ouro    => Nivel.platina,
       Nivel.platina => Nivel.mestre,
-      Nivel.mestre  => Nivel.mestre,
+      _             => Nivel.mestre,
     };
-    notifyListeners();
   }
 
   void resetJogo() {
@@ -133,13 +110,12 @@ class GameState extends ChangeNotifier {
     acertosNaFase = 0;
     errosNaFase = 0;
     vidas = 3;
-    pontosAcumuladosFase = 0;
     nivelAtual = Nivel.bronze;
     notifyListeners();
   }
 
   // ---------------------------------------------------
-  // PERSISTÊNCIA (FIREBASE)
+  // PERSISTÊNCIA (MAPERS PARA FIRESTORE)
   // ---------------------------------------------------
   
   Map<String, dynamic> toMap() {

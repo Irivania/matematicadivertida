@@ -25,7 +25,6 @@ class PerguntaService {
     final pNorm = perfil.toLowerCase().trim();
 
     do {
-      // Seleção de perfil com base no nível e fase
       pergunta = switch (pNorm) {
         "crianca" || "criança" => _gerarCrianca(nivel, fase),
         "adulto" => _gerarAdulto(nivel, fase),
@@ -33,7 +32,6 @@ class PerguntaService {
       };
 
       tentativas++;
-      // Previne loops infinitos se o histórico estiver muito cheio para o nível
       if (tentativas >= 5) _limparHistorico();
     } while (_historico.contains(_id(pergunta)));
 
@@ -42,7 +40,7 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 👶 PERFIL: CRIANÇA (Progressão Pedagógica)
+  // 👶 PERFIL: CRIANÇA
   // =====================================================
 
   Pergunta _gerarCrianca(String nivel, int fase) {
@@ -61,7 +59,7 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 🧑 PERFIL: ADULTO (Foco em Agilidade Mental)
+  // 🧑 PERFIL: ADULTO
   // =====================================================
 
   Pergunta _gerarAdulto(String nivel, int fase) {
@@ -81,7 +79,7 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 👨‍🏫 PERFIL: PROFESSOR (Desafio e Lógica)
+  // 👨‍🏫 PERFIL: PROFESSOR
   // =====================================================
 
   Pergunta _gerarProfessor(String nivel, int fase) {
@@ -101,7 +99,7 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 🎲 GERADORES DE OPERAÇÕES (Lógica de Negócio)
+  // 🎲 GERADORES
   // =====================================================
 
   Pergunta _operacaoBasica(String op, int min, int max) {
@@ -140,7 +138,7 @@ class PerguntaService {
 
   Pergunta _porcentagemAvancada() {
     int valor = (rand.nextInt(9) + 1) * 100;
-    int perc = (rand.nextInt(3) + 1) * 15; // 15%, 30%, 45%
+    int perc = (rand.nextInt(3) + 1) * 15;
     int r = (valor * perc) ~/ 100;
     return _base("$perc% de $valor", r, "porcentagem");
   }
@@ -154,14 +152,14 @@ class PerguntaService {
   }
 
   Pergunta _potenciaAvancada() {
-    int base = rand.nextInt(3) + 2; // 2 a 4
-    int exp = rand.nextInt(3) + 3;  // 3 a 5
-    int r = pow(base, exp).toInt();
-    return _base("$base^$exp", r, "potencia");
+    int b = rand.nextInt(3) + 2;
+    int e = rand.nextInt(3) + 3;
+    int r = pow(b, e).toInt();
+    return _base("$b^$e", r, "potencia");
   }
 
   Pergunta _raizQuadrada() {
-    int n = rand.nextInt(11) + 5; // Raízes de 25 a 225
+    int n = rand.nextInt(11) + 5;
     return _base("√${n * n}", n, "raiz");
   }
 
@@ -205,13 +203,12 @@ class PerguntaService {
   Pergunta _problemaMedio() => _operacaoBasica("×", 4, 12);
 
   // =====================================================
-  // 🛠 HELPER DE FORMATAÇÃO E DICAS
+  // 🛠 HELPER DE FORMATAÇÃO E DICAS (LIMPO)
   // =====================================================
 
   Pergunta _base(String exp, int resultado, String tipo) {
     String questao = exp.trim();
     
-    // Normalização de prefixos e sufixos
     if (!questao.toLowerCase().contains("quanto") && 
         !questao.toLowerCase().contains("se") && 
         !questao.contains("?")) {
@@ -222,7 +219,6 @@ class PerguntaService {
       questao = "$questao =";
     }
 
-    // Lógica de Dicas Inteligentes
     String dica = "";
     bool temSomaOuSub = exp.contains('+') || exp.contains('-');
     bool temMultOuDiv = exp.contains('×') || exp.contains('÷');
@@ -230,17 +226,18 @@ class PerguntaService {
     if (temSomaOuSub && temMultOuDiv) {
       dica = "⚠️ Ordem das Operações: Resolva as multiplicações ou divisões primeiro, depois faça a soma ou subtração!";
     } else {
+      // DICAS LIMPAS SEM WILDCARDS DESNECESSÁRIOS
       dica = switch (tipo) {
-        "basica" && _ when exp.contains('+') => "Somar é o mesmo que juntar quantidades!",
-        "basica" && _ when exp.contains('-') => "Na subtração, você descobre quanto sobra ao tirar uma parte.",
-        "basica" && _ when exp.contains('×') => "A multiplicação é uma soma repetida. $exp significa somar o mesmo número várias vezes.",
-        "divisao"    => "Dividir é repartir um valor em partes iguais.",
-        "equacao"    => "Pense no 'x' como um buraco vazio que você precisa preencher para a conta dar certo.",
-        "porcentagem"=> "Porcentagem é uma parte de 100. Dica: 10% é só dividir por 10!",
-        "fracao"     => "Frações são pedaços de um todo. Divida o número pelo denominador indicado.",
-        "raiz"       => "Qual número que, multiplicado por ele mesmo, resulta no valor que está dentro da raiz?",
-        "regra3"     => "Tente descobrir o valor de 1 unidade primeiro para depois multiplicar pela quantidade desejada.",
-        _            => "Leia com atenção e resolva um passo de cada vez. Você consegue!"
+        "basica" when exp.contains('+') => "Somar é o mesmo que juntar quantidades!",
+        "basica" when exp.contains('-') => "Na subtração, você descobre quanto sobra ao tirar uma parte.",
+        "basica" when exp.contains('×') => "A multiplicação é uma soma repetida. $exp significa somar o mesmo número várias vezes.",
+        "divisao"     => "Dividir é repartir um valor em partes iguais.",
+        "equacao"     => "Pense no 'x' como um buraco vazio que você precisa preencher para a conta dar certo.",
+        "porcentagem" => "Porcentagem é uma parte de 100. Dica: 10% é só dividir por 10!",
+        "fracao"      => "Frações são pedaços de um todo. Divida o número pelo denominador indicado.",
+        "raiz"        => "Qual número que, multiplicado por ele mesmo, resulta no valor que está dentro da raiz?",
+        "regra3"      => "Tente descobrir o valor de 1 unidade primeiro para depois multiplicar pela quantidade desejada.",
+        _             => "Leia com atenção e resolva um passo de cada vez. Você consegue!"
       };
     }
 
@@ -252,7 +249,6 @@ class PerguntaService {
     );
   }
 
-  // Helpers do Histórico
   void _adicionarAoHistorico(Pergunta p) {
     String id = _id(p);
     if (_historico.length >= _maxHistorico) {

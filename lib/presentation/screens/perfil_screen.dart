@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Importações Corrigidas com Caminhos Absolutos
 import 'package:matematicadivertida/core/theme/app_colors.dart';
 import 'package:matematicadivertida/data/services/auth_service.dart';
 import 'package:matematicadivertida/presentation/routes/app_routes.dart';
@@ -22,24 +21,25 @@ class PerfilScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundEscuro,
       body: Stack(
         children: [
-          // 1. Fundo da tela
+          // 1. FUNDO DA TELA
           Positioned.fill(
             child: Image.asset(
               'assets/images/fundo_imagem_perfil.png',
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
-              // Fallback caso a imagem falte para não travar o app
-              errorBuilder: (context, error, stackTrace) => Container(color: AppColors.backgroundEscuro),
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: AppColors.backgroundEscuro),
             ),
           ),
-          
-          // 2. BOTÃO DE SAIR (LOGOUT)
+
+          // 2. BOTÃO DE SAIR
           Positioned(
             top: 20,
             right: 20,
             child: SafeArea(
               child: IconButton(
-                icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 32),
+                icon: const Icon(Icons.logout_rounded,
+                    color: Colors.white, size: 32),
                 tooltip: "Sair e trocar de conta",
                 onPressed: () async {
                   await authService.sair();
@@ -51,7 +51,7 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
 
-          // 3. Conteúdo Principal
+          // 3. CONTEÚDO PRINCIPAL
           SafeArea(
             child: SizedBox(
               width: largura,
@@ -62,14 +62,13 @@ class PerfilScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Column(
                     children: [
-                      SizedBox(height: alturaTela * 0.35), 
-
+                      SizedBox(height: alturaTela * 0.35),
                       const Text(
                         "ESCOLHA SEU AVATAR",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 22, 
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 3.0,
                           shadows: [
@@ -77,12 +76,12 @@ class PerfilScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      
                       const SizedBox(height: 30),
                       
+                      // GRID DE SELEÇÃO
                       Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 900), 
+                          constraints: const BoxConstraints(maxWidth: 900),
                           child: GridView.count(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -90,36 +89,37 @@ class PerfilScreen extends StatelessWidget {
                             childAspectRatio: 0.75,
                             crossAxisSpacing: 25,
                             mainAxisSpacing: 25,
-                            children: [
+                            // CORREÇÃO: 'const' removido para aceitar filhos com parâmetros dinâmicos
+                            children: const [
                               _CardPerfilAnimado(
                                 labelExibicao: "MENINO",
-                                perfilLogico: "crianca", 
-                                imagem: "assets/images/menino.png", 
-                                neonColor: const Color(0xFFFFD700),
+                                perfilLogico: "crianca",
+                                imagem: "assets/images/menino.png",
+                                neonColor: Color(0xFFFFD700),
                               ),
                               _CardPerfilAnimado(
                                 labelExibicao: "MENINA",
-                                perfilLogico: "crianca", 
-                                imagem: "assets/images/menina.png", 
-                                neonColor: const Color(0xFFC040FF),
+                                perfilLogico: "crianca",
+                                imagem: "assets/images/menina.png",
+                                neonColor: Color(0xFFC040FF),
                               ),
                               _CardPerfilAnimado(
                                 labelExibicao: "ADULTO",
-                                perfilLogico: "adulto", 
-                                imagem: "assets/images/adulto.png", 
+                                perfilLogico: "adulto",
+                                imagem: "assets/images/adulto.png",
                                 neonColor: AppColors.neonCiano,
                               ),
                               _CardPerfilAnimado(
                                 labelExibicao: "PROFESSOR",
-                                perfilLogico: "professor", 
-                                imagem: "assets/images/professor.png", 
+                                perfilLogico: "professor",
+                                imagem: "assets/images/professor.png",
                                 neonColor: AppColors.neonVerde,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 80), 
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
@@ -131,6 +131,8 @@ class PerfilScreen extends StatelessWidget {
     );
   }
 }
+
+// --- WIDGET INTERNO: CARD ANIMADO ---
 
 class _CardPerfilAnimado extends StatefulWidget {
   final String labelExibicao;
@@ -164,15 +166,13 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
     );
 
     try {
-      // Atualiza no Firebase o tipo de perfil escolhido
       await _authService.atualizarPerfilUsuario(widget.perfilLogico);
-      
+
       if (mounted) {
-        Navigator.pop(context); // Fecha o loading
-        // Navega para a tela de Níveis passando o perfil escolhido como argumento
+        Navigator.pop(context); 
         Navigator.pushNamed(
-          context, 
-          AppRoutes.nivel, 
+          context,
+          AppRoutes.nivel,
           arguments: widget.perfilLogico,
         );
       }
@@ -180,7 +180,7 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erro ao salvar perfil. Tente novamente.")),
+          SnackBar(content: Text("Erro ao salvar perfil: $e")),
         );
       }
     }
@@ -190,8 +190,14 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() { _escala = 1.05; _isHovered = true; }),
-      onExit: (_) => setState(() { _escala = 1.0; _isHovered = false; }),
+      onEnter: (_) => setState(() {
+        _escala = 1.05;
+        _isHovered = true;
+      }),
+      onExit: (_) => setState(() {
+        _escala = 1.0;
+        _isHovered = false;
+      }),
       child: GestureDetector(
         onTap: _selecionarPerfil,
         child: AnimatedScale(
@@ -200,9 +206,11 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
           curve: Curves.easeOutBack,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22), 
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: _isHovered ? widget.neonColor : widget.neonColor.withValues(alpha: 0.5), 
+                color: _isHovered
+                    ? widget.neonColor
+                    : widget.neonColor.withValues(alpha: 0.5),
                 width: 3,
               ),
               boxShadow: [
@@ -219,13 +227,14 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    widget.imagem, 
-                    fit: BoxFit.cover, 
+                    widget.imagem,
+                    fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50, color: Colors.white24),
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Colors.white24),
                   ),
-                  
-                  // Gradiente para leitura do texto
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -241,7 +250,6 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                       ),
                     ),
                   ),
-                  
                   Positioned(
                     bottom: 15,
                     left: 0,

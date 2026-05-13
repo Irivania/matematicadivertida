@@ -49,6 +49,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
     });
 
     try {
+      // Certifique-se de que o arquivo existe em assets/sons/conquista.mp3
       await _audioPlayer.play(AssetSource('sons/conquista.mp3'));
     } catch (e) {
       debugPrint("Erro ao tocar som: $e");
@@ -97,6 +98,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
               child: Stack(
                 children: [
                   // LINHA DA TRILHA
+                  // Removido 'const' pois depende do Painter que recebe funções dinâmicas
                   CustomPaint(
                     size: Size(larguraTrilha, size.height),
                     painter: TrilhaPainter(
@@ -108,7 +110,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
                   // MASCOTES
                   _buildMascote(2, "🐵", "Bronze", size),
                   _buildMascote(5, "🐺", "Prata", size),
-                  _buildMascote(8, " foxes", "Ouro", size),
+                  _buildMascote(8, "🦊", "Ouro", size),
                   _buildMascote(11, "🦄", "Platina", size),
                   _buildMascote(14, "🐉", "Mestre", size),
 
@@ -125,7 +127,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
                         onTap: concluirFase,
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -197,8 +199,8 @@ class FaseWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool concluida = numero < faseAtual;
-    bool bloqueada = numero > faseAtual;
+    final bool concluida = numero < faseAtual;
+    final bool bloqueada = numero > faseAtual;
 
     return GestureDetector(
       onTap: () => onTap(numero),
@@ -251,8 +253,9 @@ class MascoteAnimado extends StatelessWidget {
           tween: Tween<double>(begin: 0, end: 10),
           duration: const Duration(seconds: 1),
           builder: (context, double value, child) {
+            final double jump = value > 5 ? (10 - value) : value;
             return Transform.translate(
-              offset: Offset(0, value > 5 ? value - 10 : -value),
+              offset: Offset(0, -jump),
               child: Text(emoji, style: const TextStyle(fontSize: 45)),
             );
           },
@@ -306,5 +309,7 @@ class TrilhaPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant TrilhaPainter oldDelegate) {
+    return oldDelegate.fasesCount != fasesCount;
+  }
 }

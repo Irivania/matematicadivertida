@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+// Importações de Camadas
 import '../../../data/services/pergunta_service.dart';
 import '../../../data/models/pergunta.dart';
 import '../../../data/models/game_state.dart';
 import '../controllers/game_controller.dart';
 import '../../../core/theme/app_colors.dart';
+
+// Widgets de Suporte
 import '../widgets/dialogs/success_dialog.dart';
 import '../widgets/dialogs/error_dialog.dart';
 
@@ -23,170 +26,196 @@ class JogoScreen extends StatefulWidget {
   State<JogoScreen> createState() => _JogoScreenState();
 }
 
-class _JogoScreenState extends State<JogoScreen> {
-  final service = PerguntaService();
-  late GameController controller;
+class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
+  // Instâncias de serviço e controle
+  final _perguntaService = PerguntaService();
+  late GameController _controller;
 
-  Pergunta? perguntaAtualObjeto;
-  final respostaController = TextEditingController();
-  final FocusNode respostaFocusNode = FocusNode();
-  final FocusNode geralFocusNode = FocusNode();
+  // Estado Local da Tela
+  Pergunta? _perguntaAtual;
+  final _respostaController = TextEditingController();
+  final _respostaFocusNode = FocusNode();
+  final _geralFocusNode = FocusNode();
 
-  Timer? timer;
-  int tempoRestante = 60;
-
-  bool jogoAtivo = false;
+  Timer? _timer;
+  int _tempoRestante = 60;
+  bool _jogoAtivo = false;
 
   @override
   void initState() {
     super.initState();
-    controller = GameController(context: context);
+    WidgetsBinding.instance.addObserver(this);
+    _controller = GameController(context: context);
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      iniciar();
-    });
+    // Inicialização após o primeiro frame
+    WidgetsBinding.instance.addPostFrameCallback((_) => _iniciarDesafio());
   }
 
   @override
   void dispose() {
-    timer?.cancel();
-    respostaController.dispose();
-    respostaFocusNode.dispose();
-    geralFocusNode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _cancelarTimer();
+    _respostaController.dispose();
+    _respostaFocusNode.dispose();
+    _geralFocusNode.dispose();
     super.dispose();
   }
 
-  void _gerenciarFoco() {
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!mounted) return;
-      if (jogoAtivo) {
-        FocusScope.of(context).requestFocus(respostaFocusNode);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pausa o cronômetro se o usuário sair do app
+    if (state == AppLifecycleState.paused && _jogoAtivo) {
+      _pausarJogo();
+    }
+  }
+
+  // --- Lógica de Negócio do Jogo ---
+
+  void _iniciarDesafio() {
+    if (!mounted) return;
+    final gameState = context.read<GameState>();
+    gameState.resetFase(); 
+    
+    setState(() {
+      _jogoAtivo = true;
+      _tempoRestante = 60;
+    });
+
+    _gerarPergunta();
+    _iniciarCronometro();
+    _gerenciarFocoAutomático();
+  }
+
+  void _pausarJogo() {
+    setState(() => _jogoAtivo = false);
+    _cancelarTimer();
+  }
+
+  void _cancelarTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  void _iniciarCronometro() {
+    _cancelarTimer();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || !_jogoAtivo) return;
+      
+      if (_tempoRestante <= 0) {
+        _finalizarPorTempo();
       } else {
-        FocusScope.of(context).requestFocus(geralFocusNode);
+        setState(() => _tempoRestante--);
       }
     });
   }
 
-  void iniciar() {
-    final gameState = Provider.of<GameState>(context, listen: false);
-    gameState.resetFase(); 
+  void _gerarPergunta() {
+    final gameState = context.read<GameState>();
     
-    setState(() {
-      jogoAtivo = true;
-      tempoRestante = 60;
-    });
-    gerarPergunta();
-    iniciarTimer();
-    _gerenciarFoco();
-  }
-
-  void gerarPergunta() {
-    final gameState = Provider.of<GameState>(context, listen: false);
-    
-    // CORREÇÃO: fase -> faseAtual
-    final pergunta = service.gerar(
+    final pergunta = _perguntaService.gerar(
       perfil: widget.perfil,
       nivel: gameState.nivelParaService,
       fase: gameState.faseAtual, 
     );
 
     setState(() {
-      perguntaAtualObjeto = pergunta;
-      respostaController.clear();
+      _perguntaAtual = pergunta;
+      _respostaController.clear();
     });
-    _gerenciarFoco();
+    _gerenciarFocoAutomático();
   }
 
-  void iniciarTimer() {
-    timer?.cancel();
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted || !jogoAtivo) return;
-      if (tempoRestante <= 0) {
-        _pararPorTempo();
-      } else {
-        setState(() => tempoRestante--);
-      }
-    });
-  }
+  void _validarResposta() {
+    if (!_jogoAtivo || _perguntaAtual == null) return;
 
-  void _pararPorTempo() {
-    timer?.cancel();
-    setState(() => jogoAtivo = false);
+    final textoDigitado = _respostaController.text.trim().toLowerCase();
+    final respostaCorreta = _perguntaAtual!.resposta.trim().toLowerCase();
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => ErrorDialog(
-        mensagem: "⌛ O tempo acabou!",
-        onRetry: iniciar,
-      ),
-    );
-  }
-
-  void responder() {
-    if (!jogoAtivo || perguntaAtualObjeto == null) return;
-
-    final textoDigitado = respostaController.text.trim();
     if (textoDigitado.isEmpty) return;
 
-    final String respostaUsuario = textoDigitado.toLowerCase();
-    final String respostaCorreta = perguntaAtualObjeto!.resposta.trim().toLowerCase();
-    
-    if (respostaUsuario != respostaCorreta) {
-      timer?.cancel();
-      setState(() => jogoAtivo = false);
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => ErrorDialog(
-          mensagem: "🎮 Errado! A resposta era: ${perguntaAtualObjeto!.resposta}",
-          onRetry: iniciar,
-        ),
-      );
-      return;
-    }
-
-    final gameState = Provider.of<GameState>(context, listen: false);
-    gameState.registrarAcerto();
-
-    // CORREÇÃO: perguntaAtual -> indicePerguntaAtual
-    if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {
-      _finalizarFase();
+    if (textoDigitado != respostaCorreta) {
+      _processarErro(respostaCorreta);
     } else {
-      gameState.avancarPergunta();
-      gerarPergunta();
+      _processarAcerto();
     }
   }
 
-  void _finalizarFase() {
-    timer?.cancel();
-    setState(() => jogoAtivo = false);
+  void _processarAcerto() {
+    final gameState = context.read<GameState>();
+    gameState.registrarAcerto();
+    HapticFeedback.lightImpact(); // Feedback tátil (2026 UX)
+
+    if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {
+      _concluirFase();
+    } else {
+      gameState.avancarPergunta();
+      _gerarPergunta();
+    }
+  }
+
+  void _processarErro(String correta) {
+    _cancelarTimer();
+    setState(() => _jogoAtivo = false);
+
+    _exibirDialogo(ErrorDialog(
+      mensagem: "🎮 Errado! A resposta era: $correta",
+      onRetry: _iniciarDesafio,
+    ));
+  }
+
+  void _finalizarPorTempo() {
+    _cancelarTimer();
+    setState(() => _jogoAtivo = false);
     
-    final gameState = Provider.of<GameState>(context, listen: false);
+    _exibirDialogo(ErrorDialog(
+      mensagem: "⌛ O tempo acabou!",
+      onRetry: _iniciarDesafio,
+    ));
+  }
+
+  void _concluirFase() {
+    _cancelarTimer();
+    setState(() => _jogoAtivo = false);
     
+    final gameState = context.read<GameState>();
+    
+    _exibirDialogo(SuccessDialog(
+      acertos: gameState.acertosNaFase,
+      onNext: () {
+        gameState.concluirEAvancarFase(); 
+        _iniciarDesafio();
+      },
+    ));
+  }
+
+  // --- UI Helpers ---
+
+  void _exibirDialogo(Widget dialog) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => SuccessDialog(
-        acertos: gameState.acertosNaFase,
-        onNext: () {
-          gameState.concluirEAvancarFase(); 
-          iniciar();
-        },
-      ),
+      builder: (context) => dialog,
     );
   }
 
-  void _exibirAjudaDoCal() {
-    if (perguntaAtualObjeto == null) return;
+  void _gerenciarFocoAutomático() {
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      FocusScope.of(context).requestFocus(
+        _jogoAtivo ? _respostaFocusNode : _geralFocusNode
+      );
+    });
+  }
+
+  void _exibirDicaDoCal() {
+    if (_perguntaAtual == null) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.backgroundEscuro,
         title: const Text("Dica do Cal 🤖", style: TextStyle(color: AppColors.neonCiano)),
-        content: Text(perguntaAtualObjeto!.dica, style: const TextStyle(color: Colors.white)),
+        content: Text(_perguntaAtual!.dica, style: const TextStyle(color: Colors.white)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), 
@@ -206,23 +235,20 @@ class _JogoScreenState extends State<JogoScreen> {
     final double recuoTopo = ehCrianca ? screenHeight * 0.38 : screenHeight * 0.44;
 
     return KeyboardListener(
-      focusNode: geralFocusNode,
+      focusNode: _geralFocusNode,
       autofocus: true,
       onKeyEvent: (event) {
         if (event is KeyDownEvent &&
             (event.logicalKey == LogicalKeyboardKey.enter ||
              event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
-          if (!jogoAtivo) {
-            iniciar();
-          } else {
-            responder();
-          }
+          _jogoAtivo ? _validarResposta() : _iniciarDesafio();
         }
       },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
+            // Background Dinâmico
             Positioned.fill(
               child: Image.asset(
                 _getImagemFundo(),
@@ -247,6 +273,7 @@ class _JogoScreenState extends State<JogoScreen> {
               ),
             ),
 
+            // Botão Voltar
             Positioned(
               top: 10, left: 10,
               child: IconButton(
@@ -255,12 +282,14 @@ class _JogoScreenState extends State<JogoScreen> {
               ),
             ),
 
-            if (jogoAtivo) _buildMascoteCal(ehCrianca),
+            if (_jogoAtivo) _buildMascoteCal(ehCrianca),
           ],
         ),
       ),
     );
   }
+
+  // --- Widgets de Componentização ---
 
   Widget _buildHUD(GameState state) {
     return Padding(
@@ -268,11 +297,11 @@ class _JogoScreenState extends State<JogoScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9), 
+          color: Colors.white.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: AppColors.neonCiano.withOpacity(0.3), 
+              color: AppColors.neonCiano.withValues(alpha: 0.3),
               blurRadius: 10
             )
           ],
@@ -281,13 +310,10 @@ class _JogoScreenState extends State<JogoScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildStatusItem(state.nomeNivelExibicao, "RANKING"),
-            // CORREÇÃO: fase -> faseAtual
             _buildStatusItem("${state.faseAtual}", "FASE"),
-            // CORREÇÃO: perguntaAtual -> indicePerguntaAtual
             _buildStatusItem("${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}", "QUESTÃO"),
-            _buildStatusItem("${tempoRestante}s", "TEMPO", 
-                color: tempoRestante < 10 ? Colors.redAccent : Colors.blueAccent),
-            // CORREÇÃO: pontosTotal -> xpTotal
+            _buildStatusItem("${_tempoRestante}s", "TEMPO", 
+                color: _tempoRestante < 10 ? Colors.redAccent : Colors.blueAccent),
             _buildStatusItem("${state.xpTotal}", "PONTOS"),
           ],
         ),
@@ -305,8 +331,7 @@ class _JogoScreenState extends State<JogoScreen> {
   }
 
   Widget _buildProgressBar(GameState state) {
-    // CORREÇÃO: perguntaAtual -> indicePerguntaAtual
-    final progresso = state.indicePerguntaAtual / state.maxPerguntasPorFase;
+    final double progresso = state.indicePerguntaAtual / state.maxPerguntasPorFase;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 50),
       child: ClipRRect(
@@ -322,12 +347,12 @@ class _JogoScreenState extends State<JogoScreen> {
   }
 
   Widget _buildMainContent() {
-    if (!jogoAtivo) return const SizedBox.shrink();
+    if (!_jogoAtivo) return const SizedBox.shrink();
 
     return Column(
       children: [
         Text(
-          perguntaAtualObjeto?.pergunta ?? "",
+          _perguntaAtual?.pergunta ?? "",
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: Colors.white, fontSize: 50, fontWeight: FontWeight.bold,
@@ -341,8 +366,8 @@ class _JogoScreenState extends State<JogoScreen> {
             border: Border(bottom: BorderSide(color: AppColors.neonCiano, width: 4))
           ),
           child: TextField(
-            controller: respostaController,
-            focusNode: respostaFocusNode,
+            controller: _respostaController,
+            focusNode: _respostaFocusNode,
             textAlign: TextAlign.center,
             keyboardType: TextInputType.text,
             style: const TextStyle(color: AppColors.neonCiano, fontSize: 50, fontWeight: FontWeight.bold),
@@ -351,7 +376,7 @@ class _JogoScreenState extends State<JogoScreen> {
               hintText: "?", 
               hintStyle: TextStyle(color: Colors.white24)
             ),
-            onSubmitted: (_) => responder(),
+            onSubmitted: (_) => _validarResposta(),
           ),
         ),
       ],
@@ -362,14 +387,14 @@ class _JogoScreenState extends State<JogoScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60),
       child: ElevatedButton(
-        onPressed: jogoAtivo ? responder : iniciar,
+        onPressed: _jogoAtivo ? _validarResposta : _iniciarDesafio,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.neonCiano,
           minimumSize: const Size(double.infinity, 60),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
         child: Text(
-          jogoAtivo ? "CONFIRMAR" : "INICIAR DESAFIO",
+          _jogoAtivo ? "CONFIRMAR" : "INICIAR DESAFIO",
           style: const TextStyle(
             color: AppColors.backgroundEscuro, 
             fontWeight: FontWeight.w900, 
@@ -385,7 +410,7 @@ class _JogoScreenState extends State<JogoScreen> {
       bottom: ehCrianca ? 130 : 100,
       right: 20,
       child: GestureDetector(
-        onTap: _exibirAjudaDoCal,
+        onTap: _exibirDicaDoCal,
         child: Column(
           children: [
             Container(
