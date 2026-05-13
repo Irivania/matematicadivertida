@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +10,8 @@ import 'core/theme/app_colors.dart';
 import 'domain/repositories/i_auth_repository.dart';
 import 'domain/repositories/i_ranking_repository.dart';
 
-// Camada de Dados (Implementações)
+// Camada de Dados (Implementações e Serviços)
+import 'data/services/auth_service.dart'; // Necessário para a injeção
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/ranking_repository_impl.dart';
 import 'data/models/game_state.dart'; 
@@ -35,16 +34,20 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        // 1. AJUSTE: Injetar usando a Interface (IAuthRepository)
+        // 1. CORREÇÃO: Injeção do AuthService dentro do AuthRepositoryImpl
         Provider<IAuthRepository>(
-          create: (_) => AuthRepositoryImpl(),
+          create: (_) => AuthRepositoryImpl(AuthService()),
         ),
-        // 2. ADIÇÃO: Injetar o Repositório de Ranking
+        
+        // 2. Repositório de Ranking
         Provider<IRankingRepository>(
           create: (_) => RankingRepositoryImpl(),
         ),
-        // 3. ESTADO: GameState permanece como ChangeNotifier
-        ChangeNotifierProvider(create: (_) => GameState()),
+        
+        // 3. Estado Global do Jogo
+        ChangeNotifierProvider(
+          create: (_) => GameState(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -69,13 +72,21 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.backgroundEscuro,
         fontFamily: 'Roboto',
         
-        // ... (Seu DialogTheme e ElevatedButtonTheme estão perfeitos, mantê-los aqui)
+        // Padronização de botões para o projeto
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.neonCiano,
+            foregroundColor: Colors.black,
+            textStyle: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
 
+      // Tela inicial que decide entre Login ou Home
       home: const AuthWrapper(),
 
-      // 4. AJUSTE: Corrigindo o nome do método para coincidir com AppRoutes
-      routes: AppRoutes.routes, // Adicionado para suportar pushNamed simples
+      // Configuração de Rotas
+      routes: AppRoutes.routes,
       onGenerateRoute: AppRoutes.onGenerateRoute, 
     );
   }

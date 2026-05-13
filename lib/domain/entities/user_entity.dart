@@ -1,5 +1,3 @@
-// lib/domain/entities/user_entity.dart
-
 import 'package:meta/meta.dart';
 
 /// Define as categorias biológicas/pedagógicas de forma tipada.
@@ -12,7 +10,10 @@ enum PerfilUsuario { professor, aluno, visitante }
 class UserEntity {
   final String uid;
   final String email;
-  final String? nome;
+  
+  /// Nome de exibição (Sincronizado com Firebase Auth e Repository)
+  final String? displayName; 
+  
   final String? fotoUrl;
   final PerfilUsuario perfil;
   final TipoUsuario tipo;
@@ -23,7 +24,7 @@ class UserEntity {
   const UserEntity({
     required this.uid,
     required this.email,
-    this.nome,
+    this.displayName,
     this.fotoUrl,
     this.perfil = PerfilUsuario.aluno,
     this.tipo = TipoUsuario.crianca,
@@ -32,15 +33,26 @@ class UserEntity {
     this.ultimaEntrada,
   });
 
-  /// Getter para nome amigável (Fallbacks de UI no Domínio)
-  String get nomeExibicao => nome ?? (email.split('@').first);
+  // ---------------------------------------------------
+  // GETTERS DE LÓGICA DE NEGÓCIO
+  // ---------------------------------------------------
 
-  /// Lógica de Negócio: Verifica se o usuário pode acessar conteúdos restritos
+  /// Retorna um nome amigável.
+  /// Prioriza o displayName; se nulo, extrai a parte antes do '@' no email.
+  String get nomeExibicao => 
+      displayName ?? (email.isNotEmpty ? email.split('@').first : 'Usuário');
+
+  /// Verifica se o usuário possui privilégios de professor/administrador.
   bool get isAdmin => perfil == PerfilUsuario.professor;
 
-  /// Cria uma nova instância com dados atualizados (Imutabilidade)
+  // ---------------------------------------------------
+  // MÉTODOS DE EVOLUÇÃO E IMUTABILIDADE
+  // ---------------------------------------------------
+
+  /// Cria uma nova instância com dados atualizados.
+  /// Essencial para o gerenciamento de estado reativo.
   UserEntity copyWith({
-    String? nome,
+    String? displayName,
     String? fotoUrl,
     PerfilUsuario? perfil,
     TipoUsuario? tipo,
@@ -51,7 +63,7 @@ class UserEntity {
     return UserEntity(
       uid: uid,
       email: email,
-      nome: nome ?? this.nome,
+      displayName: displayName ?? this.displayName,
       fotoUrl: fotoUrl ?? this.fotoUrl,
       perfil: perfil ?? this.perfil,
       tipo: tipo ?? this.tipo,
@@ -61,10 +73,9 @@ class UserEntity {
     );
   }
 
-  /// Lógica de Evolução: Adiciona pontos e calcula se deve subir de nível
+  /// Calcula a evolução do jogador: sobe de nível a cada 1000 pontos.
   UserEntity adicionarPontos(int pontos) {
     final novaPontuacao = pontuacaoTotal + pontos;
-    // Exemplo de regra: sobe de nível a cada 1000 pontos
     final novoNivel = (novaPontuacao / 1000).floor() + 1;
 
     return copyWith(
@@ -73,11 +84,22 @@ class UserEntity {
     );
   }
 
+  // ---------------------------------------------------
+  // OVERRIDES (IGUALDADE E DEBUG)
+  // ---------------------------------------------------
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is UserEntity && runtimeType == other.runtimeType && uid == other.uid;
+      other is UserEntity && 
+      runtimeType == other.runtimeType && 
+      uid == other.uid;
 
   @override
   int get hashCode => uid.hashCode;
+
+  @override
+  String toString() {
+    return 'UserEntity(uid: $uid, email: $email, name: $displayName, level: $nivelAtual)';
+  }
 }

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:matematicadivertida/core/enums/nivel_enum.dart';
-import 'package:matematicadivertida/core/config/estrutura_pedagogica.dart';
-import 'package:matematicadivertida/domain/entities/game_session_entity.dart';
-import 'package:matematicadivertida/domain/entities/pergunta_entity.dart';
-import 'package:matematicadivertida/domain/usecases/calcular_pontuacao_use_case.dart';
+import '../../domain/usecases/calcular_pontuacao_usecase.dart';
+import '../../core/enums/nivel_enum.dart';
+import '../../core/config/estrutura_pedagogica.dart';
 
+/// Gerencia o estado reativo do progresso do jogador durante uma sessão.
 class GameState extends ChangeNotifier {
-  // Injeção de dependência do Caso de Uso
+  // Injeção do Caso de Uso de Domínio
   final _calcularPontuacao = CalcularPontuacaoUseCase();
 
   // ---------------------------------------------------
-  // ESTADO DO JOGO (INTEGRADO COM ENTIDADES)
+  // ESTADO DO JOGO
   // ---------------------------------------------------
   int faseAtual = 1;
   int perguntaAtual = 1; 
@@ -22,8 +21,15 @@ class GameState extends ChangeNotifier {
   String perfil = "crianca";
 
   // ---------------------------------------------------
-  // ALIASES E GETTERS (RESOLVE UI & COMPATIBILIDADE)
+  // GETTERS DE COMPATIBILIDADE E UI
   // ---------------------------------------------------
+  
+  /// Atalho para UI que busca 'acertos' (Corrige erro no GameHUD)
+  int get acertos => acertosNaFase;
+
+  /// Retorna o nome técnico do nível (Corrige erro na JogoScreen)
+  String get nivelParaService => nivelAtual.name;
+
   int get indicePerguntaAtual => perguntaAtual;
   String get nivel => nivelAtual.label;
   int get fase => faseAtual;
@@ -34,14 +40,12 @@ class GameState extends ChangeNotifier {
 
   String get nomeNivelExibicao => "${nivelAtual.icone} ${nivelAtual.label}";
   
-  // Converte o Enum Nivel para a dificuldade esperada pelo UseCase/Service
+  /// Converte o Enum Nivel para a dificuldade técnica processada pelo UseCase.
   Dificuldade get dificuldadeTecnica {
     if (nivelAtual == Nivel.bronze) return Dificuldade.facil;
     if (nivelAtual == Nivel.prata) return Dificuldade.medio;
     return Dificuldade.dificil;
   }
-
-  String get nivelParaService => nivelAtual.name[0].toUpperCase() + nivelAtual.name.substring(1);
 
   // ---------------------------------------------------
   // MÉTODOS DE LÓGICA DE JOGO
@@ -50,9 +54,9 @@ class GameState extends ChangeNotifier {
   void registrarAcerto({int tempoRestante = 0}) {
     acertosNaFase++;
     
-    // DELEGAÇÃO: A lógica de pontos agora vem do UseCase de Domínio
-    final pontosGanhos = _calcularPontuacao.executar(
-      acertos: 1, // Pontuamos por acerto individual
+    // O retorno do UseCase já é int conforme a última correção
+    final int pontosGanhos = _calcularPontuacao.executar(
+      acertos: 1,
       dificuldade: dificuldadeTecnica,
       tempoRestante: tempoRestante,
     );
@@ -79,7 +83,6 @@ class GameState extends ChangeNotifier {
     acertosNaFase = 0;
     errosNaFase = 0;
     vidas = 3;
-    // Opcional: Implementar lógica de perda de XP por reset se desejado
     notifyListeners();
   }
 
@@ -115,7 +118,7 @@ class GameState extends ChangeNotifier {
   }
 
   // ---------------------------------------------------
-  // PERSISTÊNCIA (MAPERS PARA FIRESTORE)
+  // PERSISTÊNCIA (MAPPERS PARA FIRESTORE)
   // ---------------------------------------------------
   
   Map<String, dynamic> toMap() {

@@ -1,22 +1,22 @@
-// lib/presentation/routes/app_routes.dart
-
 import 'package:flutter/material.dart';
 
 // Imports de Telas (Screens)
-import 'package:matematicadivertida/presentation/screens/home_screen.dart';
-import 'package:matematicadivertida/presentation/screens/perfil_screen.dart';
-import 'package:matematicadivertida/presentation/screens/nivel_screen.dart';
-import 'package:matematicadivertida/presentation/screens/trilha_screen.dart';
-import 'package:matematicadivertida/presentation/screens/jogo_screen.dart';
-import 'package:matematicadivertida/presentation/screens/ranking_screen.dart';
+import '../screens/home_screen.dart';
+import '../screens/perfil_screen.dart';
+import '../screens/nivel_screen.dart';
+import '../screens/trilha_screen.dart';
+import '../screens/jogo_screen.dart';
+import '../screens/ranking_screen.dart';
+import '../screens/crianca_game.dart';
+import '../screens/adulto_game.dart';
+import '../screens/professor_game.dart';
 
-// Agora com os códigos completos, os imports estão liberados
-import 'package:matematicadivertida/presentation/screens/crianca_game.dart';
-import 'package:matematicadivertida/presentation/screens/adulto_game.dart';
-import 'package:matematicadivertida/presentation/screens/professor_game.dart';
+// Importante: Se você tiver uma tela de Login específica, importe-a aqui.
+// Caso contrário, redirecionamos para a Home ou criamos o placeholder.
 
 class AppRoutes {
   // Constantes de Rota (Nomes Únicos)
+  static const String login = "/"; // Definida como rota inicial para resolver erro na PerfilScreen
   static const String home = "/home_view";
   static const String perfil = "/perfil";
   static const String nivel = "/nivel";
@@ -30,9 +30,9 @@ class AppRoutes {
   static const String professor = "/modo_professor";
 
   /// Mapa de rotas estáticas.
-  /// Em 2026, usamos este mapa para telas sem argumentos complexos.
   static Map<String, WidgetBuilder> get routes {
     return {
+      // Se não tiver uma LoginScreen separada, a home assume o papel inicial
       home: (_) => const HomeScreen(),
       perfil: (_) => const PerfilScreen(),
       nivel: (_) => const NivelScreen(),
@@ -46,10 +46,13 @@ class AppRoutes {
     };
   }
 
-  /// Gerador de rotas dinâmicas.
-  /// Essencial para passar parâmetros ou definir animações customizadas.
+  /// Gerador de rotas dinâmicas para parâmetros complexos ou animações.
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case login:
+        // Caso use a HomeScreen como tela de entrada/login
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        
       case jogo:
         // Permite chamar JogoScreen diretamente passando o perfil como argumento
         final args = settings.arguments as String? ?? "crianca";
@@ -57,9 +60,13 @@ class AppRoutes {
           builder: (_) => JogoScreen(perfil: args),
         );
       
-      // Fallback para rotas não encontradas (404 Error Screen em 2026)
+      // Fallback para rotas não encontradas
       default:
-        return null;
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Rota não encontrada')),
+          ),
+        );
     }
   }
 }

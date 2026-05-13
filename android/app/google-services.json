@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "5577210485-7a182kq109mmgbh16t5ou50hbehbqssi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.matematicadivertida",
+            "certificate_hash": "3a265755ff7303e15f46f27e0cc6774d176374d2"
+          }
+        },
+        {
           "client_id": "5577210485-0ul1lhb99g08rsq15kk0v4r6uf54vkg8.apps.googleusercontent.com",
           "client_type": 3
         }

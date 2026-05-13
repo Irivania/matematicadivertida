@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-// Importações de Camadas
+// Camadas de Dados e Domínio
 import '../../../data/services/pergunta_service.dart';
 import '../../../data/models/pergunta.dart';
 import '../../../data/models/game_state.dart';
-import '../controllers/game_controller.dart';
 import '../../../core/theme/app_colors.dart';
 
-// Widgets de Suporte
+// Widgets de Interface
 import '../widgets/dialogs/success_dialog.dart';
 import '../widgets/dialogs/error_dialog.dart';
 
@@ -27,11 +26,9 @@ class JogoScreen extends StatefulWidget {
 }
 
 class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
-  // Instâncias de serviço e controle
   final _perguntaService = PerguntaService();
-  late GameController _controller;
 
-  // Estado Local da Tela
+  // Gerenciamento de Estado Local
   Pergunta? _perguntaAtual;
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
@@ -45,9 +42,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _controller = GameController(context: context);
     
-    // Inicialização após o primeiro frame
+    // Inicializa o estado do jogo após o carregamento da tela
     WidgetsBinding.instance.addPostFrameCallback((_) => _iniciarDesafio());
   }
 
@@ -63,17 +59,18 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pausa o cronômetro se o usuário sair do app
     if (state == AppLifecycleState.paused && _jogoAtivo) {
       _pausarJogo();
     }
   }
 
-  // --- Lógica de Negócio do Jogo ---
+  // --- Lógica de Fluxo do Jogo ---
 
   void _iniciarDesafio() {
     if (!mounted) return;
     final gameState = context.read<GameState>();
+    
+    // Reseta o progresso para uma nova rodada
     gameState.resetFase(); 
     
     setState(() {
@@ -83,7 +80,6 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
     _gerarPergunta();
     _iniciarCronometro();
-    _gerenciarFocoAutomático();
   }
 
   void _pausarJogo() {
@@ -115,14 +111,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     final pergunta = _perguntaService.gerar(
       perfil: widget.perfil,
       nivel: gameState.nivelParaService,
-      fase: gameState.faseAtual, 
+      fase: gameState.fase, 
     );
 
     setState(() {
       _perguntaAtual = pergunta;
       _respostaController.clear();
     });
-    _gerenciarFocoAutomático();
+    
+    _garantirFoco();
   }
 
   void _validarResposta() {
@@ -143,8 +140,9 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   void _processarAcerto() {
     final gameState = context.read<GameState>();
     gameState.registrarAcerto();
-    HapticFeedback.lightImpact(); // Feedback tátil (2026 UX)
+    HapticFeedback.mediumImpact();
 
+    // Verifica se completou a quantidade de questões da fase
     if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {
       _concluirFase();
     } else {
@@ -158,8 +156,11 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     setState(() => _jogoAtivo = false);
 
     _exibirDialogo(ErrorDialog(
-      mensagem: "🎮 Errado! A resposta era: $correta",
-      onRetry: _iniciarDesafio,
+      mensagem: "🎮 A resposta correta era: $correta",
+      onRetry: () {
+        Navigator.pop(context);
+        _iniciarDesafio();
+      },
     ));
   }
 
@@ -168,8 +169,11 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     setState(() => _jogoAtivo = false);
     
     _exibirDialogo(ErrorDialog(
-      mensagem: "⌛ O tempo acabou!",
-      onRetry: _iniciarDesafio,
+      mensagem: "⌛ Seu tempo acabou!",
+      onRetry: () {
+        Navigator.pop(context);
+        _iniciarDesafio();
+      },
     ));
   }
 
@@ -182,13 +186,20 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     _exibirDialogo(SuccessDialog(
       acertos: gameState.acertosNaFase,
       onNext: () {
+        Navigator.pop(context);
         gameState.concluirEAvancarFase(); 
         _iniciarDesafio();
       },
     ));
   }
 
-  // --- UI Helpers ---
+  // --- Auxiliares de UI ---
+
+  void _garantirFoco() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _respostaFocusNode.requestFocus();
+    });
+  }
 
   void _exibirDialogo(Widget dialog) {
     showDialog(
@@ -198,16 +209,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _gerenciarFocoAutomático() {
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (!mounted) return;
-      FocusScope.of(context).requestFocus(
-        _jogoAtivo ? _respostaFocusNode : _geralFocusNode
-      );
-    });
-  }
-
-  void _exibirDicaDoCal() {
+  void _exibirDica() {
     if (_perguntaAtual == null) return;
 
     showDialog(
@@ -219,7 +221,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), 
-            child: const Text("ENTENDI", style: TextStyle(color: AppColors.neonCiano))
+            child: const Text("OK", style: TextStyle(color: AppColors.neonCiano))
           )
         ],
       ),
@@ -228,19 +230,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
     final gameState = context.watch<GameState>();
-    
     final bool ehCrianca = widget.perfil.toLowerCase().contains('crian');
-    final double recuoTopo = ehCrianca ? screenHeight * 0.38 : screenHeight * 0.44;
 
     return KeyboardListener(
       focusNode: _geralFocusNode,
-      autofocus: true,
       onKeyEvent: (event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.enter ||
-             event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+        if (event is KeyDownEvent && 
+           (event.logicalKey == LogicalKeyboardKey.enter || 
+            event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
           _jogoAtivo ? _validarResposta() : _iniciarDesafio();
         }
       },
@@ -248,7 +246,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            // Background Dinâmico
+            // Background Adaptativo
             Positioned.fill(
               child: Image.asset(
                 _getImagemFundo(),
@@ -260,121 +258,106 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
             SafeArea(
               child: Column(
                 children: [
-                  SizedBox(height: recuoTopo),
+                  SizedBox(height: ehCrianca ? 320 : 380),
                   _buildHUD(gameState),
                   const SizedBox(height: 12),
                   _buildProgressBar(gameState),
                   const Spacer(),
-                  _buildMainContent(),
+                  _buildAreaDePergunta(),
                   const Spacer(flex: 2),
-                  _buildFooterButton(),
+                  _buildBotaoAcao(),
                   const SizedBox(height: 30),
                 ],
               ),
             ),
 
-            // Botão Voltar
+            if (_jogoAtivo) _buildMascoteDica(ehCrianca),
+            
+            // Voltar
             Positioned(
               top: 10, left: 10,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
-
-            if (_jogoAtivo) _buildMascoteCal(ehCrianca),
           ],
         ),
       ),
     );
   }
 
-  // --- Widgets de Componentização ---
+  // --- Componentes de Interface ---
 
   Widget _buildHUD(GameState state) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.neonCiano.withValues(alpha: 0.3),
-              blurRadius: 10
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildStatusItem(state.nomeNivelExibicao, "RANKING"),
-            _buildStatusItem("${state.faseAtual}", "FASE"),
-            _buildStatusItem("${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}", "QUESTÃO"),
-            _buildStatusItem("${_tempoRestante}s", "TEMPO", 
-                color: _tempoRestante < 10 ? Colors.redAccent : Colors.blueAccent),
-            _buildStatusItem("${state.xpTotal}", "PONTOS"),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _statusColumn(state.nomeNivelExibicao, "RANK"),
+          _statusColumn("${state.fase}", "FASE"),
+          _statusColumn("${_tempoRestante}s", "TEMPO", 
+            color: _tempoRestante < 10 ? Colors.red : Colors.blue),
+          _statusColumn("${state.pontos}", "XP"),
+        ],
       ),
     );
   }
 
-  Widget _buildStatusItem(String value, String label, {Color color = Colors.black87}) {
+  Widget _statusColumn(String value, String label, {Color color = Colors.black87}) {
     return Column(
       children: [
-        Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: Colors.black45, fontSize: 8, fontWeight: FontWeight.w900)),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
     );
   }
 
   Widget _buildProgressBar(GameState state) {
-    final double progresso = state.indicePerguntaAtual / state.maxPerguntasPorFase;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 50),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: LinearProgressIndicator(
-          value: progresso.clamp(0.0, 1.0),
-          minHeight: 8,
-          backgroundColor: Colors.white24,
-          color: Colors.greenAccent,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: LinearProgressIndicator(
+        value: state.indicePerguntaAtual / state.maxPerguntasPorFase,
+        backgroundColor: Colors.white24,
+        color: Colors.greenAccent,
+        minHeight: 6,
       ),
     );
   }
 
-  Widget _buildMainContent() {
+  Widget _buildAreaDePergunta() {
     if (!_jogoAtivo) return const SizedBox.shrink();
 
     return Column(
       children: [
         Text(
           _perguntaAtual?.pergunta ?? "",
-          textAlign: TextAlign.center,
           style: const TextStyle(
-            color: Colors.white, fontSize: 50, fontWeight: FontWeight.bold,
-            shadows: [Shadow(color: Colors.black, blurRadius: 15)],
+            color: Colors.white, fontSize: 56, fontWeight: FontWeight.bold,
+            shadows: [Shadow(color: Colors.black, blurRadius: 10)],
           ),
         ),
-        const SizedBox(height: 15),
-        Container(
-          width: 200,
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.neonCiano, width: 4))
-          ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: 180,
           child: TextField(
             controller: _respostaController,
             focusNode: _respostaFocusNode,
             textAlign: TextAlign.center,
-            keyboardType: TextInputType.text,
-            style: const TextStyle(color: AppColors.neonCiano, fontSize: 50, fontWeight: FontWeight.bold),
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: AppColors.neonCiano, fontSize: 48, fontWeight: FontWeight.bold),
             decoration: const InputDecoration(
-              border: InputBorder.none, 
-              hintText: "?", 
-              hintStyle: TextStyle(color: Colors.white24)
+              hintText: "?",
+              hintStyle: TextStyle(color: Colors.white24),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.neonCiano, width: 3)),
             ),
             onSubmitted: (_) => _validarResposta(),
           ),
@@ -383,47 +366,34 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildFooterButton() {
+  Widget _buildBotaoAcao() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 60),
+      padding: const EdgeInsets.symmetric(horizontal: 40),
       child: ElevatedButton(
         onPressed: _jogoAtivo ? _validarResposta : _iniciarDesafio,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.neonCiano,
-          minimumSize: const Size(double.infinity, 60),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          minimumSize: const Size(double.infinity, 55),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(
-          _jogoAtivo ? "CONFIRMAR" : "INICIAR DESAFIO",
-          style: const TextStyle(
-            color: AppColors.backgroundEscuro, 
-            fontWeight: FontWeight.w900, 
-            fontSize: 18
-          ),
+          _jogoAtivo ? "CONFIRMAR" : "COMEÇAR AGORA",
+          style: const TextStyle(color: AppColors.backgroundEscuro, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  Widget _buildMascoteCal(bool ehCrianca) {
+  Widget _buildMascoteDica(bool ehCrianca) {
     return Positioned(
-      bottom: ehCrianca ? 130 : 100,
+      bottom: ehCrianca ? 140 : 110,
       right: 20,
       child: GestureDetector(
-        onTap: _exibirDicaDoCal,
+        onTap: _exibirDica,
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)],
-              ),
-              child: const Text("Dica?", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(width: 80, child: Image.asset('assets/images/mascote_cal.png')),
+            const Text("DICA", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            Image.asset('assets/images/mascote_cal.png', width: 70),
           ],
         ),
       ),
@@ -432,8 +402,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   String _getImagemFundo() {
     final p = widget.perfil.toLowerCase();
-    if (p.contains('professor')) return 'assets/images/professor.png';
-    if (p.contains('adulto')) return 'assets/images/adulto.png';
+    if (p.contains('prof')) return 'assets/images/professor.png';
+    if (p.contains('adul')) return 'assets/images/adulto.png';
     return 'assets/images/crianca.png';
   }
 }

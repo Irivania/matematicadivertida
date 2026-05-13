@@ -1,5 +1,3 @@
-// lib/data/services/auth_service.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,34 +8,33 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Em 2026, usamos variáveis de ambiente ou o GoogleService-Info.plist/json
-  // para gerenciar ClientIDs, evitando hardcoding.
+  // Gerenciamento centralizado do Google Sign-In
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
   );
 
+  // Streams e Getters para monitoramento de estado
   Stream<User?> get usuarioStatus => _auth.authStateChanges();
   User? get usuarioAtual => _auth.currentUser;
 
-  /// Login Anônimo com identificação de hardware (opcional para evitar spam)
-  Future<UserCredential?> entrarNoJogo() async {
+  /// Login Anônimo - Nome alterado para coincidir com a chamada do Repository
+  Future<User?> entrarAnonimamente() async {
     try {
       final UserCredential userCredential = await _auth.signInAnonymously();
       
       if (userCredential.user != null) {
-        // Inicializa apenas dados básicos. Privilégios são via Security Rules.
         await _initializeUserRecord(userCredential.user!);
       }
-      return userCredential;
+      return userCredential.user;
     } on FirebaseAuthException catch (e) {
       debugPrint('Erro Autenticação Anônima: ${e.code}');
       rethrow;
     }
   }
 
+  /// Autenticação via Google
   Future<UserCredential?> entrarComGoogle() async {
     try {
-      // No Web, garantir que o estado anterior não interfira
       if (kIsWeb) await _googleSignIn.signOut();
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -62,28 +59,43 @@ class AuthService {
     }
   }
 
-  /// Inicialização Segura: Usa merge para não sobrescrever dados sensíveis
-  /// que podem ter sido definidos via Admin SDK ou Cloud Functions.
+  /// Inicialização no Firestore com merge para preservar dados de gamificação
   Future<void> _initializeUserRecord(User user) async {
     final userRef = _firestore.collection(AppConstants.colUsuarios).doc(user.uid);
     
-    // Usamos serverTimestamp() para evitar fraudes de horário local do celular
     await userRef.set({
       'uid': user.uid,
       'email': user.email,
+      'displayName': user.displayName,
       'is_anonymous': user.isAnonymous,
       'metadata': {
         'last_login': FieldValue.serverTimestamp(),
-        'created_at': FieldValue.serverTimestamp(), // Firestore Rules impedirão alteração posterior
       }
     }, SetOptions(merge: true));
   }
 
+  /// Método para atualização de dados básicos (Exigido pelo Repository)
+  Future<void> atualizarDadosBasicos({String? displayName, String? photoURL}) async {
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    // Atualiza no Firebase Auth
+    if (displayName != null) await user.updateDisplayName(displayName);
+    if (photoURL != null) await user.updatePhotoURL(photoURL);
+
+    // Sincroniza com o Firestore
+    await _firestore.collection(AppConstants.colUsuarios).doc(user.uid).update({
+      'displayName': displayName ?? user.displayName,
+      'fotoUrl': photoURL ?? user.photoURL,
+      'metadata.last_update': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Método específico para trocar perfil (Professor/Aluno)
   Future<void> atualizarPerfilUsuario(String perfilEscolhido) async {
     final User? user = _auth.currentUser;
     if (user == null) throw Exception("Sessão inválida.");
 
-    // Validação de Domínio no Service
     final allowedProfiles = ['aluno', 'professor'];
     if (!allowedProfiles.contains(perfilEscolhido)) {
       throw Exception("Perfil inválido.");
@@ -91,16 +103,25 @@ class AuthService {
 
     await _firestore.collection(AppConstants.colUsuarios).doc(user.uid).update({
       'perfil': perfilEscolhido,
-      'config': {
-        'atualizado_em': FieldValue.serverTimestamp(),
-        'setup_complete': true,
-      }
+      'config.setup_complete': true,
+      'config.atualizado_em': FieldValue.serverTimestamp(),
     });
   }
 
+  /// Exclusão de conta (Exigido pelo Repository)
+  Future<void> excluirConta() async {
+    final User? user = _auth.currentUser;
+    if (user == null) return;
+
+    // Remove do Firestore antes de deletar a Auth
+    await _firestore.collection(AppConstants.colUsuarios).doc(user.uid).delete();
+    await user.delete();
+  }
+
+  /// Logout
   Future<void> sair() async {
     try {
-      if (!kIsWeb) await _googleSignIn.signOut();
+      await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {
       debugPrint('Erro ao encerrar sessão: $e');
