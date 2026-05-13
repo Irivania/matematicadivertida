@@ -1,4 +1,4 @@
-import '../enums/nivel_enum.dart';
+import 'package:matematicadivertida/core/enums/nivel_enum.dart';
 
 /// Enum representando os anos escolares do 1º ao 5º ano.
 enum AnoEscolar {
@@ -18,7 +18,7 @@ const Map<Nivel, AnoEscolar> nivelParaAnoEscolar = {
   Nivel.mestre: AnoEscolar.quinto,     // 5º ano
 };
 
-/// Estrutura pedagógica por ano escolar.
+/// Estrutura pedagógica por ano escolar com os conteúdos da BNCC.
 const Map<AnoEscolar, List<String>> conteudoPorAno = {
   AnoEscolar.primeiro: [
     'Números até 20',
@@ -48,10 +48,17 @@ const Map<AnoEscolar, List<String>> conteudoPorAno = {
 };
 
 /// Estrutura de progressão do jogo.
+/// 
+/// Centraliza as regras de negócio sobre a quantidade de questões.
 class EstruturaProgresso {
   static const int fasesPorNivel = 10;
   static const int perguntasPorFase = 10;
 
-  static const int perguntasPorNivel = fasesPorNivel * perguntasPorFase; // 100
-  static final int perguntasTotal = perguntasPorNivel * Nivel.values.length; // 500
+  /// Quantidade de perguntas para completar um nível inteiro (100).
+  static const int perguntasPorNivel = fasesPorNivel * perguntasPorFase;
+
+  /// CORREÇÃO: Para evitar o erro 'const_initialized_with_non_constant_value',
+  /// definimos o total multiplicando pelo número fixo de níveis (5).
+  /// Total: 500 perguntas no jogo.
+  static const int perguntasTotal = perguntasPorNivel * 5; 
 }

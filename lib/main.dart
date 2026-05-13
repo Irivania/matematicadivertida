@@ -1,26 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+
+// Importações Core e Configurações
 import 'core/config/firebase_options.dart'; 
 import 'core/theme/app_colors.dart';
-import 'routes/app_routes.dart';
 
-// Importação das Telas
-import 'screens/auth/login_screen.dart';
-import 'screens/perfil_screen.dart';
-import 'screens/nivel_screen.dart';
-import 'game/jogo_screen.dart';
-import 'screens/home_screen.dart';
+// Importações de Camadas e Modelos (Caminhos ajustados para evitar erros de URI)
+import 'data/models/game_state.dart'; 
+import 'presentation/auth/auth_wrapper.dart';
+import 'presentation/routes/app_routes.dart';
+import 'presentation/screens/jogo_screen.dart'; // Verifique se este caminho existe
+import 'presentation/screens/trilha_screen.dart';
 
 void main() async {
-  // 1. Garante a inicialização dos bindings do Flutter
+  // 1. Garante a inicialização dos bindings do Flutter antes do Firebase
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inicializa o Firebase com as configurações que corrigimos (Web/Android)
+  // 2. Inicializa o Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
+  runApp(
+    // 3. Gerenciamento de Estado Global
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GameState()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -41,7 +51,16 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.backgroundEscuro,
         fontFamily: 'Roboto',
         
-        // Estilo padrão para os botões do app
+        // CORREÇÃO: Usando DialogThemeData em vez de DialogTheme
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.backgroundEscuro,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+            side: const BorderSide(color: AppColors.neonCiano, width: 1),
+          ),
+        ),
+
+        // Botões Neon com sintaxe atualizada
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.neonCiano,
@@ -49,33 +68,34 @@ class MyApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            elevation: 12,
+            // CORREÇÃO: Sugestão de uso de transparência compatível
+            shadowColor: AppColors.neonCiano.withValues(alpha: 0.8),
           ),
         ),
       ),
 
+      // Ponto de entrada que decide se vai para Login ou Perfil
+      home: const AuthWrapper(),
+
       // =================================================
-      // GERENCIAMENTO DE ROTAS
+      // MAPA DE ROTAS
       // =================================================
-      // Definimos o Login como a primeira tela para garantir a autenticação
-      initialRoute: '/login', 
-      
       routes: {
-        // Rota principal de Login
-        '/login': (context) => const LoginScreen(),
+        // Rotas estáticas
+        ...AppRoutes.routes,
+        AppRoutes.trilha: (context) => const TrilhaScreen(),
 
-        // Rotas dinâmicas baseadas no seu arquivo app_routes.dart
-        AppRoutes.home: (context) => const HomeScreen(),
-        AppRoutes.nivel: (context) => const NivelScreen(),
-        
-        // PROTEÇÃO EXTRA: Registramos a rota tanto pelo seu objeto AppRoutes 
-        // quanto pela string direta '/perfil' para evitar erros de navegação.
-        AppRoutes.perfil: (context) => const PerfilScreen(),
-        '/perfil': (context) => const PerfilScreen(), 
-
-        // Rota do Jogo com passagem de argumentos (Perfil escolhido)
+        // Rota dinâmica para o Jogo
         AppRoutes.jogo: (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
-          final String perfilEscolhido = (args is String) ? args : 'crianca';
+          
+          // Tenta ler o perfil dos argumentos ou do estado global
+          // Certifique-se que o getter 'perfilEscolhido' ou similar existe no GameState
+          final String perfilEscolhido = (args is String) 
+              ? args 
+              : context.read<GameState>().perfilUsuario ?? 'crianca'; 
+          
           return JogoScreen(perfil: perfilEscolhido);
         },
       },

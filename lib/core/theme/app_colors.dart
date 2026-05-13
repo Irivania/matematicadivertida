@@ -1,34 +1,20 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Fundo Principal (Dark para destacar o Neon)
-  static const Color backgroundEscuro = Color(0xFF020617);
-  static const Color backgroundCard = Color(0xFF0F172A);
+  // Cores constantes (podem ser usadas em qualquer lugar)
+  static const Color backgroundEscuro = Color(0xFF0D0D0D);
+  static const Color neonCiano = Color(0xFF00FFFF);
+  static const Color neonRosa = Color(0xFFFF00FF);
+  static const Color neonRoxo = Color(0xFF9D00FF);
+  static const Color brancoPuro = Color(0xFFFFFFFF);
+  
+  // Adicionando as cores que o seu log de erros disse que estavam faltando:
+  static const Color neonVerde = Color(0xFF39FF14);
+  static const Color neonAmarelo = Color(0xFFFFFF00);
+  static const Color backgroundCard = Color(0xFF1E1E1E);
 
-  // Cores Neon - Modo Disputa
-  static const Color neonCiano = Color(0xFF22D3EE);   // Para botões e HUD
-  static const Color neonRosa = Color(0xFFEC4899);    // Para erros e alertas
-  static const Color neonVerde = Color(0xFF4ADE80);   // Para acertos
-  static const Color neonRoxo = Color(0xFF8B5CF6);    // Para títulos
-
-  // Cores Amigáveis - Modo Treino (Mantendo a essência do seu projeto atual)
-  static const Color treinoAzul = Color(0xFF3B82F6);
-  static const Color treinoAmarelo = Color(0xFFFACC15);
-
-  // Sombras de Brilho (Glow)
-  static List<BoxShadow> glowCiano = [
-    BoxShadow(
-      color: neonCiano.withOpacity(0.5),
-      blurRadius: 15,
-      spreadRadius: 2,
-    ),
-  ];
-
-  static List<BoxShadow> glowRosa = [
-    BoxShadow(
-      color: neonRosa.withOpacity(0.5),
-      blurRadius: 15,
-      spreadRadius: 2,
-    ),
-  ];
+  // Cores dinâmicas (NÃO podem usar 'const' antes delas nos widgets)
+  // O uso de 'static Color get' é mais eficiente para 2026
+  static Color get cianoBrilhante => neonCiano.withValues(alpha: 0.8);
+  static Color get rosaSombra => neonRosa.withValues(alpha: 0.2);
 }
