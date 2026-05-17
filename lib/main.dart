@@ -1,93 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-// Configurações e Temas
-import 'core/config/firebase_options.dart'; 
-import 'core/theme/app_colors.dart';
+// CAMINHO CORRIGIDO: Apontando para o local real do arquivo dentro do seu projeto
+import 'package:matematicadivertida/core/config/firebase_options.dart'; 
 
-// Camada de Domínio (Interfaces)
-import 'domain/repositories/i_auth_repository.dart';
-import 'domain/repositories/i_ranking_repository.dart';
+// Domínio e Dados
+import 'package:matematicadivertida/data/services/auth_service.dart';
+import 'package:matematicadivertida/data/repositories/auth_repository_impl.dart';
+import 'package:matematicadivertida/domain/repositories/i_auth_repository.dart';
+import 'package:matematicadivertida/presentation/controllers/auth_controller.dart';
 
-// Camada de Dados (Implementações e Serviços)
-import 'data/services/auth_service.dart'; // Necessário para a injeção
-import 'data/repositories/auth_repository_impl.dart';
-import 'data/repositories/ranking_repository_impl.dart';
-import 'data/models/game_state.dart'; 
-
-// Camada de Apresentação
-import 'presentation/auth/auth_wrapper.dart';
-import 'presentation/routes/app_routes.dart';
+// Apresentação (Mantendo 'screens' no plural conforme seu VS Code)
+import 'package:matematicadivertida/presentation/auth/login_screen.dart';
+import 'package:matematicadivertida/presentation/screens/perfil_screen.dart';
 
 void main() async {
+  // Garante a inicialização correta dos bindings do Flutter Web
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint("Erro crítico de inicialização: $e");
-  }
+  
+  // Inicializa o Firebase usando as opções do arquivo encontrado
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(
     MultiProvider(
       providers: [
-        // 1. CORREÇÃO: Injeção do AuthService dentro do AuthRepositoryImpl
-        Provider<IAuthRepository>(
-          create: (_) => AuthRepositoryImpl(AuthService()),
+        Provider<AuthService>(
+          create: (_) => AuthService(),
         ),
-        
-        // 2. Repositório de Ranking
-        Provider<IRankingRepository>(
-          create: (_) => RankingRepositoryImpl(),
+        ProxyProvider<AuthService, IAuthRepository>(
+          update: (_, authService, __) => AuthRepositoryImpl(authService),
         ),
-        
-        // 3. Estado Global do Jogo
-        ChangeNotifierProvider(
-          create: (_) => GameState(),
+        ChangeNotifierProvider<AuthController>(
+          create: (context) => AuthController(
+            Provider.of<IAuthRepository>(context, listen: false),
+          ),
         ),
       ],
-      child: const MyApp(),
+      child: const MeuApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MeuApp extends StatelessWidget {
+  const MeuApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Matemática Divertida',
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.neonCiano,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: AppColors.backgroundEscuro,
-        fontFamily: 'Roboto',
-        
-        // Padronização de botões para o projeto
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.neonCiano,
-            foregroundColor: Colors.black,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+        brightness: Brightness.dark,
       ),
+      home: Consumer<AuthController>(
+        builder: (context, authController, _) {
+          
+          // 1. Estado de Carregamento: Firebase checando o token em segundo plano
+          if (authController.isLoading && authController.usuarioAtual == null) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-      // Tela inicial que decide entre Login ou Home
-      home: const AuthWrapper(),
+          // 2. Estado Autenticado: Usuário logado vai direto para a tela de Perfil
+          if (authController.estaAutenticado) {
+            return const PerfilScreen(); 
+          }
 
-      // Configuração de Rotas
-      routes: AppRoutes.routes,
-      onGenerateRoute: AppRoutes.onGenerateRoute, 
+          // 3. Estado Desautenticado: Exibe a tela de Login híbrida
+          return const LoginScreen();
+        },
+      ),
     );
   }
 }

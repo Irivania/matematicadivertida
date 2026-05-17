@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 // Imports de Telas (Screens)
 import '../screens/home_screen.dart';
+import '../auth/cadastro_screen.dart'; // Importação oficial da sua tela de cadastro
 import '../screens/perfil_screen.dart';
 import '../screens/nivel_screen.dart';
 import '../screens/trilha_screen.dart';
@@ -11,12 +12,13 @@ import '../screens/crianca_game.dart';
 import '../screens/adulto_game.dart';
 import '../screens/professor_game.dart';
 
-// Importante: Se você tiver uma tela de Login específica, importe-a aqui.
-// Caso contrário, redirecionamos para a Home ou criamos o placeholder.
+// Imports de Autenticação
+import '../auth/login_screen.dart'; 
 
 class AppRoutes {
   // Constantes de Rota (Nomes Únicos)
-  static const String login = "/"; // Definida como rota inicial para resolver erro na PerfilScreen
+  static const String login = "/"; 
+  static const String cadastro = "/cadastro";
   static const String home = "/home_view";
   static const String perfil = "/perfil";
   static const String nivel = "/nivel";
@@ -32,7 +34,11 @@ class AppRoutes {
   /// Mapa de rotas estáticas.
   static Map<String, WidgetBuilder> get routes {
     return {
-      // Se não tiver uma LoginScreen separada, a home assume o papel inicial
+      login: (_) => const LoginScreen(),
+      
+      // CORRIGIDO: Agora aponta diretamente para a sua tela real criada!
+      cadastro: (_) => const CadastroScreen(), 
+      
       home: (_) => const HomeScreen(),
       perfil: (_) => const PerfilScreen(),
       nivel: (_) => const NivelScreen(),
@@ -49,10 +55,6 @@ class AppRoutes {
   /// Gerador de rotas dinâmicas para parâmetros complexos ou animações.
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case login:
-        // Caso use a HomeScreen como tela de entrada/login
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
-        
       case jogo:
         // Permite chamar JogoScreen diretamente passando o perfil como argumento
         final args = settings.arguments as String? ?? "crianca";

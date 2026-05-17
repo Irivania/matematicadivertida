@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; 
 import 'package:matematicadivertida/core/theme/app_colors.dart';
-import 'package:matematicadivertida/data/services/auth_service.dart';
-import 'package:matematicadivertida/presentation/routes/app_routes.dart';
+import 'package:matematicadivertida/presentation/controllers/auth_controller.dart'; 
 
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
@@ -10,7 +10,6 @@ class PerfilScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final largura = MediaQuery.of(context).size.width;
     final alturaTela = MediaQuery.of(context).size.height;
-    final AuthService authService = AuthService();
 
     // Lógica de colunas responsiva
     int colunas = 4;
@@ -32,26 +31,7 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
 
-          // 2. BOTÃO DE SAIR
-          Positioned(
-            top: 20,
-            right: 20,
-            child: SafeArea(
-              child: IconButton(
-                icon: const Icon(Icons.logout_rounded,
-                    color: Colors.white, size: 32),
-                tooltip: "Sair e trocar de conta",
-                onPressed: () async {
-                  await authService.sair();
-                  if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, AppRoutes.login);
-                  }
-                },
-              ),
-            ),
-          ),
-
-          // 3. CONTEÚDO PRINCIPAL
+          // 2. CONTEÚDO PRINCIPAL (Movido para trás do botão no Stack)
           SafeArea(
             child: SizedBox(
               width: largura,
@@ -89,7 +69,6 @@ class PerfilScreen extends StatelessWidget {
                             childAspectRatio: 0.75,
                             crossAxisSpacing: 25,
                             mainAxisSpacing: 25,
-                            // CORREÇÃO: 'const' removido para aceitar filhos com parâmetros dinâmicos
                             children: const [
                               _CardPerfilAnimado(
                                 labelExibicao: "MENINO",
@@ -126,6 +105,26 @@ class PerfilScreen extends StatelessWidget {
               ),
             ),
           ),
+
+          // 3. BOTÃO DE SAIR REATIVO (Colocado por último para garantir o clique no topo)
+          Positioned(
+            top: 20,
+            right: 20,
+            child: SafeArea(
+              child: IconButton(
+                icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 32),
+                tooltip: "Sair e trocar de conta",
+                onPressed: () async {
+                  try {
+                    // Aciona o fluxo limpo do seu controlador que avisa o repositório e limpa a UI
+                    await Provider.of<AuthController>(context, listen: false).logout();
+                  } catch (e) {
+                    debugPrint("Erro ao deslogar pelo controlador: $e");
+                  }
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -154,7 +153,6 @@ class _CardPerfilAnimado extends StatefulWidget {
 class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
   double _escala = 1.0;
   bool _isHovered = false;
-  final AuthService _authService = AuthService();
 
   void _selecionarPerfil() async {
     showDialog(
@@ -166,22 +164,25 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
     );
 
     try {
-      await _authService.atualizarPerfilUsuario(widget.perfilLogico);
-
-      if (mounted) {
-        Navigator.pop(context); 
-        Navigator.pushNamed(
-          context,
-          AppRoutes.nivel,
-          arguments: widget.perfilLogico,
-        );
-      }
+      final authController = Provider.of<AuthController>(context, listen: false);
+      
+      await authController.realizarLogin(
+        nome: widget.labelExibicao,
+        perfil: widget.perfilLogico,
+        tipo: widget.perfilLogico,
+        onSuccess: () {
+          if (mounted) Navigator.pop(context);
+        },
+        onError: (erro) {
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erro ao salvar perfil: $e")),
-        );
       }
     }
   }
@@ -208,14 +209,12 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: _isHovered
-                    ? widget.neonColor
-                    : widget.neonColor.withValues(alpha: 0.5),
+                color: _isHovered ? widget.neonColor : widget.neonColor.withOpacity(0.5),
                 width: 3,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.neonColor.withValues(alpha: _isHovered ? 0.4 : 0.2),
+                  color: widget.neonColor.withOpacity(_isHovered ? 0.4 : 0.2),
                   blurRadius: _isHovered ? 20 : 10,
                   spreadRadius: 1,
                 ),
@@ -243,7 +242,7 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.8),
+                            Colors.black.withOpacity(0.8),
                           ],
                           stops: const [0.6, 1.0],
                         ),

@@ -23,9 +23,6 @@ abstract class IAuthRepository {
   Future<void> signOut();
 
   /// Atualiza os dados de perfil do usuário no Firestore.
-  /// 
-  /// CORREÇÃO: Parâmetros tornados opcionais com chaves {} para bater com a 
-  /// implementação e permitir atualizações parciais.
   Future<void> updateProfile({
     String? displayName,
     String? photoURL,
@@ -33,6 +30,34 @@ abstract class IAuthRepository {
     String? tipo,   // Ex: 'aluno', 'professor'
   });
 
-  /// Deleta a conta do usuário e seus dados associados (LGPD).
+  /// Deleta a conta do usuário e seus dados associados (Regra de Compliance/LGPD).
   Future<void> deleteAccount();
+
+  // =========================================================================
+  // NOVOS MÉTODOS: FLUXO DE E-MAIL E SENHA (AUTENTICAÇÃO HÍBRIDA)
+  // =========================================================================
+
+  /// Realiza a autenticação de um usuário existente utilizando E-mail e Senha.
+  /// 
+  /// Dispara um `AuthFailure` caso as credenciais sejam inválidas.
+  Future<UserEntity?> signInWithEmailAndPassword({
+    required String email,
+    required String senha,
+  });
+
+  /// Registra um novo usuário no sistema criando uma conta com E-mail e Senha.
+  /// 
+  /// [nome] será utilizado para o preenchimento inicial do `displayName`.
+  Future<UserEntity?> signUpWithEmailAndPassword({
+    required String email,
+    required String senha,
+    required String nome,
+  });
+
+  /// Envia um link de redefinição de acesso para o e-mail informado.
+  /// 
+  /// Essencial para a funcionalidade de "Esqueci minha senha".
+  Future<void> sendPasswordResetEmail({
+    required String email,
+  });
 }

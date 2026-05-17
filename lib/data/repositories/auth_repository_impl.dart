@@ -17,10 +17,8 @@ class AuthRepositoryImpl implements IAuthRepository {
     return UserEntity(
       uid: user.uid,
       email: user.email ?? '',
-      displayName: user.displayName, // Removido o fallback fixo para usar a lógica da Entity
+      displayName: user.displayName,
       fotoUrl: user.photoURL,
-      // Nota: Perfil, Tipo e Pontuação costumam vir do Firestore. 
-      // Se o AuthService não os provê, eles assumem os valores default da Entity.
     );
   }
 
@@ -42,7 +40,7 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   @override
-  Future<UserEntity> signInWithGoogle() async {
+  Future<UserEntity?> signInWithGoogle() async {
     try {
       final UserCredential? credential = await _authService.entrarComGoogle();
       
@@ -50,13 +48,13 @@ class AuthRepositoryImpl implements IAuthRepository {
         throw AuthFailure("Operação cancelada pelo usuário.");
       }
 
-      return _mapFirebaseUser(credential.user)!;
+      return _mapFirebaseUser(credential.user);
       
     } on FirebaseAuthException catch (e) {
       throw AuthFailure("Erro Firebase: ${e.code}"); 
     } catch (e) {
       debugPrint("Erro Crítico (signInWithGoogle): $e");
-      throw AuthFailure("Erro inesperado ao autenticar.");
+      throw AuthFailure("Erro inesperado ao autenticar com Google.");
     }
   }
 
@@ -78,33 +76,107 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
-  /// RESOLUÇÃO DO ERRO: Assinatura compatível com a Interface IAuthRepository
   @override
   Future<void> updateProfile({
     String? displayName, 
     String? photoURL, 
-    String? perfil, // Alterado para String? para manter compatibilidade genérica
-    String? tipo,   // Adicionado parâmetro 'tipo' exigido pela interface
+    String? perfil, 
+    String? tipo,   
   }) async {
     try {
-      // 1. Atualiza dados de identidade (Firebase Auth)
       await _authService.atualizarDadosBasicos(
         displayName: displayName,
         photoURL: photoURL,
       );
 
-      // 2. Atualiza metadados pedagógicos (Firestore)
       if (perfil != null) {
         await _authService.atualizarPerfilUsuario(perfil);
       }
-      
-      // Se houver lógica específica para tipo (adulto/criança) no AuthService:
-      if (tipo != null) {
-        // Exemplo: await _authService.atualizarTipoUsuario(tipo);
-      }
-      
     } catch (e) {
       throw AuthFailure("Erro ao atualizar dados do perfil.");
+    }
+  }
+
+  // =========================================================================
+  // IMPLEMENTAÇÃO DOS NOVOS MÉTODOS DE AUTENTICAÇÃO HÍBRIDA
+  // =========================================================================
+
+  @override
+  Future<UserEntity?> signInWithEmailAndPassword({
+    required String email,
+    required String senha,
+  }) async {
+    try {
+      // Nota: Certifique-se de que o seu AuthService implemente este método
+      final user = await _authService.entrarComEmailESenha(email, senha);
+      return _mapFirebaseUser(user);
+    } on FirebaseAuthException catch (e) {
+      // Tratamento amigável de erros comuns do Firebase Auth
+      switch (e.code) {
+        case 'user-not-found':
+          throw AuthFailure("E-mail não cadastrado.");
+        case 'wrong-password':
+          throw AuthFailure("Senha incorreta.");
+        case 'invalid-email':
+          throw AuthFailure("O formato do e-mail digitado é inválido.");
+        case 'user-disabled':
+          throw AuthFailure("Este usuário foi desativado temporariamente.");
+        default:
+          throw AuthFailure("Erro ao realizar login: ${e.message}");
+      }
+    } catch (e) {
+      throw AuthFailure("Não foi possível conectar ao servidor de autenticação.");
+    }
+  }
+
+  @override
+  Future<UserEntity?> signUpWithEmailAndPassword({
+    required String email,
+    required String senha,
+    required String nome,
+  }) async {
+    try {
+      // 1. Cria a credencial de e-mail e senha no Firebase Auth
+      final user = await _authService.cadastrarComEmailESenha(email, senha);
+      
+      if (user != null) {
+        // 2. Atualiza imediatamente o nome informado na ficha de cadastro
+        await _authService.atualizarDadosBasicos(displayName: nome);
+        
+        // Reload necessário para garantir que o token local pegue o displayName criado
+        await user.reload();
+        final usuarioAtualizado = _authService.usuarioAtual;
+        
+        return _mapFirebaseUser(usuarioAtualizado);
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          throw AuthFailure("Este e-mail já está sendo utilizado por outra conta.");
+        case 'weak-password':
+          throw AuthFailure("A senha informada é muito fraca. Digite pelo menos 6 caracteres.");
+        case 'invalid-email':
+          throw AuthFailure("O e-mail digitado é inválido.");
+        default:
+          throw AuthFailure("Erro ao criar conta: ${e.message}");
+      }
+    } catch (e) {
+      throw AuthFailure("Falha crítica ao criar registro de usuário.");
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _authService.enviarEmailRecuperacao(email);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-email') {
+        throw AuthFailure("O formato do e-mail informado é inválido.");
+      }
+      throw AuthFailure("Não conseguimos processar o envio. Tente novamente.");
+    } catch (e) {
+      throw AuthFailure("Erro inesperado ao solicitar redefinição.");
     }
   }
 }

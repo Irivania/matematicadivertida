@@ -17,7 +17,7 @@ class AuthService {
   Stream<User?> get usuarioStatus => _auth.authStateChanges();
   User? get usuarioAtual => _auth.currentUser;
 
-  /// Login Anônimo - Nome alterado para coincidir com a chamada do Repository
+  /// Login Anônimo
   Future<User?> entrarAnonimamente() async {
     try {
       final UserCredential userCredential = await _auth.signInAnonymously();
@@ -26,8 +26,7 @@ class AuthService {
         await _initializeUserRecord(userCredential.user!);
       }
       return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Erro Autenticação Anônima: ${e.code}');
+    } on FirebaseAuthException {
       rethrow;
     }
   }
@@ -58,6 +57,60 @@ class AuthService {
       rethrow; 
     }
   }
+
+  // =========================================================================
+  // MÓDULO DE E-MAIL E SENHA CORRIGIDO (APIS OFICIAIS DO FIREBASE)
+  // =========================================================================
+
+  /// Realiza login utilizando e-mail e senha no Firebase Auth.
+  Future<User?> entrarComEmailESenha(String email, String senha) async {
+    try {
+      // CORREÇÃO: Ajustado de 'senha:' para 'password:' (padrão da biblioteca)
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      if (userCredential.user != null) {
+        await _initializeUserRecord(userCredential.user!);
+      }
+      return userCredential.user;
+    } on FirebaseAuthException {
+      rethrow; // Repassa para o AuthRepositoryImpl tratar as mensagens de UI
+    }
+  }
+
+  /// Cadastra um novo registro de usuário com e-mail e senha no Firebase Auth.
+  Future<User?> cadastrarComEmailESenha(String email, String senha) async {
+    try {
+      // CORREÇÃO: Ajustado para o nome de método oficial 'createUserWithEmailAndPassword'
+      // CORREÇÃO: Ajustado de 'senha:' para 'password:'
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      if (userCredential.user != null) {
+        await _initializeUserRecord(userCredential.user!);
+      }
+      return userCredential.user;
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
+
+  /// Dispara o e-mail oficial de redefinição de senha do Firebase.
+  Future<void> enviarEmailRecuperacao(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
+
+  // =========================================================================
+  // LOGICA DE SINCRONIZAÇÃO E METADADOS DO FIRESTORE
+  // =========================================================================
 
   /// Inicialização no Firestore com merge para preservar dados de gamificação
   Future<void> _initializeUserRecord(User user) async {
@@ -95,11 +148,6 @@ class AuthService {
   Future<void> atualizarPerfilUsuario(String perfilEscolhido) async {
     final User? user = _auth.currentUser;
     if (user == null) throw Exception("Sessão inválida.");
-
-    final allowedProfiles = ['aluno', 'professor'];
-    if (!allowedProfiles.contains(perfilEscolhido)) {
-      throw Exception("Perfil inválido.");
-    }
 
     await _firestore.collection(AppConstants.colUsuarios).doc(user.uid).update({
       'perfil': perfilEscolhido,
