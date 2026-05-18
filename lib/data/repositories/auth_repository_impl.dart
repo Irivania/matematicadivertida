@@ -10,7 +10,7 @@ class AuthRepositoryImpl implements IAuthRepository {
 
   AuthRepositoryImpl(this._authService);
 
-  /// Converte o User do Firebase para a nossa Entidade de Domínio (UserEntity)
+  /// Converte o User nativo do Firebase para a nossa Entidade de Domínio (UserEntity)
   UserEntity? _mapFirebaseUser(User? user) {
     if (user == null) return null;
     
@@ -92,13 +92,18 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (perfil != null) {
         await _authService.atualizarPerfilUsuario(perfil);
       }
+      
+      // Se o seu fluxo pedagógico exigir salvar o 'tipo' (ex: Professor/Aluno),
+      // você pode chamar uma rota do Firestore ou serviço dedicado aqui abaixo:
+      // if (tipo != null) { await _firestoreService.salvarTipo(tipo); }
+
     } catch (e) {
       throw AuthFailure("Erro ao atualizar dados do perfil.");
     }
   }
 
   // =========================================================================
-  // IMPLEMENTAÇÃO DOS NOVOS MÉTODOS DE AUTENTICAÇÃO HÍBRIDA
+  // IMPLEMENTAÇÃO DOS MÉTODOS DE AUTENTICAÇÃO HÍBRIDA (E-MAIL/SENHA)
   // =========================================================================
 
   @override
@@ -107,14 +112,13 @@ class AuthRepositoryImpl implements IAuthRepository {
     required String senha,
   }) async {
     try {
-      // Nota: Certifique-se de que o seu AuthService implemente este método
       final user = await _authService.entrarComEmailESenha(email, senha);
       return _mapFirebaseUser(user);
     } on FirebaseAuthException catch (e) {
-      // Tratamento amigável de erros comuns do Firebase Auth
       switch (e.code) {
         case 'user-not-found':
-          throw AuthFailure("E-mail não cadastrado.");
+        case 'invalid-credential': // Novo código unificado do Firebase Auth para credenciais erradas
+          throw AuthFailure("E-mail não cadastrado ou senha incorreta.");
         case 'wrong-password':
           throw AuthFailure("Senha incorreta.");
         case 'invalid-email':
@@ -125,6 +129,11 @@ class AuthRepositoryImpl implements IAuthRepository {
           throw AuthFailure("Erro ao realizar login: ${e.message}");
       }
     } catch (e) {
+      // Fallback inteligente caso a exceção venha envelopada como String (comum em compilações Web)
+      final erroStr = e.toString();
+      if (erroStr.contains('invalid-credential') || erroStr.contains('wrong-password')) {
+        throw AuthFailure("E-mail ou senha incorretos.");
+      }
       throw AuthFailure("Não foi possível conectar ao servidor de autenticação.");
     }
   }
@@ -143,7 +152,7 @@ class AuthRepositoryImpl implements IAuthRepository {
         // 2. Atualiza imediatamente o nome informado na ficha de cadastro
         await _authService.atualizarDadosBasicos(displayName: nome);
         
-        // Reload necessário para garantir que o token local pegue o displayName criado
+        // Reload necessário para garantir que o token local aplique o displayName criado
         await user.reload();
         final usuarioAtualizado = _authService.usuarioAtual;
         
@@ -162,6 +171,10 @@ class AuthRepositoryImpl implements IAuthRepository {
           throw AuthFailure("Erro ao criar conta: ${e.message}");
       }
     } catch (e) {
+      final erroStr = e.toString();
+      if (erroStr.contains('email-already-in-use')) {
+        throw AuthFailure("Este e-mail já está em uso.");
+      }
       throw AuthFailure("Falha crítica ao criar registro de usuário.");
     }
   }
@@ -174,7 +187,7 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (e.code == 'invalid-email') {
         throw AuthFailure("O formato do e-mail informado é inválido.");
       }
-      throw AuthFailure("Não conseguimos processar o envio. Tente novamente.");
+      throw AuthFailure("Não conseguimos processar o envio. Verifique os dados e tente novamente.");
     } catch (e) {
       throw AuthFailure("Erro inesperado ao solicitar redefinição.");
     }

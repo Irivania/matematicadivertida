@@ -20,7 +20,7 @@ class PerfilScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundEscuro,
       body: Stack(
         children: [
-          // 1. FUNDO DA TELA
+          // 1. FUNDO DA TELA DE PERFIL (Apontando para a nova arte integrada)
           Positioned.fill(
             child: Image.asset(
               'assets/images/fundo_imagem_perfil.png',
@@ -31,7 +31,12 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
 
-          // 2. CONTEÚDO PRINCIPAL (Movido para trás do botão no Stack)
+          // Máscara ultra suave para dar uma leve leitura aos textos sem esconder a arte
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.15)),
+          ),
+
+          // 2. CONTEÚDO PRINCIPAL
           SafeArea(
             child: SizedBox(
               width: largura,
@@ -42,23 +47,27 @@ class PerfilScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Column(
                     children: [
-                      SizedBox(height: alturaTela * 0.35),
+                      // 🚨 AJUSTE: Aumentado o recuo para 40% da tela para o título e a seleção 
+                      // começarem abaixo da área principal do desenho (rostos dos personagens)
+                      SizedBox(height: alturaTela * 0.40),
+                      
                       const Text(
                         "ESCOLHA SEU AVATAR",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 22,
+                          fontSize: 26,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 3.0,
                           shadows: [
                             Shadow(blurRadius: 15, color: AppColors.neonCiano),
+                            Shadow(blurRadius: 10, color: Colors.black54),
                           ],
                         ),
                       ),
                       const SizedBox(height: 30),
                       
-                      // GRID DE SELEÇÃO
+                      // GRID DE SELEÇÃO COM AS SUAS IMAGENS CORRETAS
                       Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 900),
@@ -66,7 +75,7 @@ class PerfilScreen extends StatelessWidget {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             crossAxisCount: colunas,
-                            childAspectRatio: 0.75,
+                            childAspectRatio: 0.85, // Ajustado levemente para encaixar melhor os avatares
                             crossAxisSpacing: 25,
                             mainAxisSpacing: 25,
                             children: const [
@@ -74,7 +83,7 @@ class PerfilScreen extends StatelessWidget {
                                 labelExibicao: "MENINO",
                                 perfilLogico: "crianca",
                                 imagem: "assets/images/menino.png",
-                                neonColor: Color(0xFFFFD700),
+                                neonColor: AppColors.neonCiano,
                               ),
                               _CardPerfilAnimado(
                                 labelExibicao: "MENINA",
@@ -85,20 +94,20 @@ class PerfilScreen extends StatelessWidget {
                               _CardPerfilAnimado(
                                 labelExibicao: "ADULTO",
                                 perfilLogico: "adulto",
-                                imagem: "assets/images/adulto.png",
-                                neonColor: AppColors.neonCiano,
+                                imagem: "assets/images/perfil_adulto.png",
+                                neonColor: Color(0xFFFFD700),
                               ),
                               _CardPerfilAnimado(
                                 labelExibicao: "PROFESSOR",
                                 perfilLogico: "professor",
-                                imagem: "assets/images/professor.png",
+                                imagem: "assets/images/perfil_professor.png",
                                 neonColor: AppColors.neonVerde,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 50),
                     ],
                   ),
                 ),
@@ -106,22 +115,27 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
 
-          // 3. BOTÃO DE SAIR REATIVO (Colocado por último para garantir o clique no topo)
+          // 3. BOTÃO DE SAIR REATIVO (No topo)
           Positioned(
             top: 20,
             right: 20,
             child: SafeArea(
-              child: IconButton(
-                icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 32),
-                tooltip: "Sair e trocar de conta",
-                onPressed: () async {
-                  try {
-                    // Aciona o fluxo limpo do seu controlador que avisa o repositório e limpa a UI
-                    await Provider.of<AuthController>(context, listen: false).logout();
-                  } catch (e) {
-                    debugPrint("Erro ao deslogar pelo controlador: $e");
-                  }
-                },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 28),
+                  tooltip: "Sair e trocar de conta",
+                  onPressed: () async {
+                    try {
+                      await Provider.of<AuthController>(context, listen: false).logout();
+                    } catch (e) {
+                      debugPrint("Erro ao deslogar pelo controlador: $e");
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -171,12 +185,20 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
         perfil: widget.perfilLogico,
         tipo: widget.perfilLogico,
         onSuccess: () {
-          if (mounted) Navigator.pop(context);
+          if (mounted) {
+            Navigator.pop(context); // Fecha o loading dialog
+            Navigator.of(context).pushReplacementNamed('/home');
+          }
         },
         onError: (erro) {
           if (mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
+            Navigator.pop(context); // Fecha o loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(erro),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
           }
         },
       );
@@ -207,15 +229,16 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
           curve: Curves.easeOutBack,
           child: Container(
             decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05), // Fundo translúcido para o card
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: _isHovered ? widget.neonColor : widget.neonColor.withOpacity(0.5),
+                color: _isHovered ? widget.neonColor : widget.neonColor.withOpacity(0.4),
                 width: 3,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.neonColor.withOpacity(_isHovered ? 0.4 : 0.2),
-                  blurRadius: _isHovered ? 20 : 10,
+                  color: widget.neonColor.withOpacity(_isHovered ? 0.35 : 0.15),
+                  blurRadius: _isHovered ? 18 : 8,
                   spreadRadius: 1,
                 ),
               ],
@@ -230,9 +253,10 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
                     errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.white24),
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white24,
+                    ),
                   ),
                   Positioned.fill(
                     child: DecoratedBox(
@@ -242,15 +266,15 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withOpacity(0.8),
+                            Colors.black.withOpacity(0.75),
                           ],
-                          stops: const [0.6, 1.0],
+                          stops: const [0.65, 1.0],
                         ),
                       ),
                     ),
                   ),
                   Positioned(
-                    bottom: 15,
+                    bottom: 12,
                     left: 0,
                     right: 0,
                     child: Text(
@@ -258,7 +282,7 @@ class _CardPerfilAnimadoState extends State<_CardPerfilAnimado> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
                       ),

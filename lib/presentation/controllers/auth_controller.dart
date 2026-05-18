@@ -1,20 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 
 class AuthController extends ChangeNotifier {
   final IAuthRepository _authRepository;
+  StreamSubscription<UserEntity?>? _authSubscription;
 
   UserEntity? _usuarioAtual;
   bool _isLoading = false;
   String _mensagemErro = '';
 
-  // Construtor inicializa escutando o status do Firebase em tempo real
+  // Construtor inicializa escutando o status de autenticação em tempo real via Stream
   AuthController(this._authRepository) {
-    _authRepository.onAuthStateChanged.listen((UserEntity? user) {
-      _usuarioAtual = user;
-      notifyListeners();
-    });
+    _escutarMudancasAutenticacao();
   }
 
   // Getters para a sua UI ler o estado interno com segurança
@@ -22,6 +21,14 @@ class AuthController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get mensagemErro => _mensagemErro;
   bool get estaAutenticado => _usuarioAtual != null;
+
+  /// Inicializa a escuta ativa do fluxo de autenticação global do repositório
+  void _escutarMudancasAutenticacao() {
+    _authSubscription = _authRepository.onAuthStateChanged.listen((UserEntity? user) {
+      _usuarioAtual = user;
+      notifyListeners();
+    });
+  }
 
   /// Método principal de login/entrada rápida (Modo Convidado com Setup de Perfil)
   Future<void> realizarLogin({
@@ -57,7 +64,8 @@ class AuthController extends ChangeNotifier {
       }
     } catch (e) {
       _pararLoading();
-      onError("Erro ao entrar: $e");
+      final msg = _tratarErroFirebase(e);
+      onError(msg);
     }
   }
 
@@ -68,9 +76,17 @@ class AuthController extends ChangeNotifier {
     required VoidCallback onSuccess,
     required Function(String) onError,
   }) async {
+    if (email.trim().isEmpty || senha.trim().isEmpty) {
+      onError("Por favor, preencha todos os campos.");
+      return;
+    }
+
     _iniciarLoading();
     try {
-      final user = await _authRepository.signInWithEmailAndPassword(email: email, senha: senha);
+      final user = await _authRepository.signInWithEmailAndPassword(
+        email: email, 
+        senha: senha,
+      );
       if (user != null) {
         _pararLoading();
         onSuccess();
@@ -80,7 +96,8 @@ class AuthController extends ChangeNotifier {
       }
     } catch (e) {
       _pararLoading();
-      onError(e.toString());
+      final msg = _tratarErroFirebase(e);
+      onError(msg);
     }
   }
 
@@ -92,6 +109,11 @@ class AuthController extends ChangeNotifier {
     required VoidCallback onSuccess,
     required Function(String) onError,
   }) async {
+    if (email.trim().isEmpty || senha.trim().isEmpty || nome.trim().isEmpty) {
+      onError("Por favor, preencha todos os campos.");
+      return;
+    }
+
     _iniciarLoading();
     try {
       final user = await _authRepository.signUpWithEmailAndPassword(
@@ -108,7 +130,8 @@ class AuthController extends ChangeNotifier {
       }
     } catch (e) {
       _pararLoading();
-      onError(e.toString());
+      final msg = _tratarErroFirebase(e);
+      onError(msg);
     }
   }
 
@@ -129,20 +152,31 @@ class AuthController extends ChangeNotifier {
       }
     } catch (e) {
       _pararLoading();
-      onError(e.toString());
+      final msg = _tratarErroFirebase(e);
+      onError(msg);
     }
   }
 
   /// Dispara o fluxo de recuperação de senha por e-mail.
   Future<void> recuperarSenha({
     required String email,
-    required String onSuccess,
+    required VoidCallback onSuccess,
     required Function(String) onError,
   }) async {
+    if (email.trim().isEmpty) {
+      onError("Por favor, digite o e-mail.");
+      return;
+    }
+
+    _iniciarLoading();
     try {
       await _authRepository.sendPasswordResetEmail(email: email);
+      _pararLoading();
+      onSuccess();
     } catch (e) {
-      onError(e.toString());
+      _pararLoading();
+      final msg = _tratarErroFirebase(e);
+      onError(msg);
     }
   }
 
@@ -168,5 +202,49 @@ class AuthController extends ChangeNotifier {
   void _pararLoading() {
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// ⚙️ Tradutor de Exceções do Firebase aprimorado para Flutter Web
+  String _tratarErroFirebase(dynamic erro) {
+    final erroStr = erro.toString();
+    _mensagemErro = erroStr;
+    debugPrint("🚨 [DEBUG AUTH] Erro cru capturado: $erroStr");
+
+    if (erroStr.contains('email-already-in-use') || 
+        erroStr.contains('account-exists-with-different-credential')) {
+      return "Este e-mail já está em uso por outra conta.";
+    }
+    if (erroStr.contains('wrong-password') || 
+        erroStr.contains('invalid-credential') || 
+        erroStr.contains('invalid-password')) {
+      return "Credenciais incorretas. Verifique seu e-mail e senha.";
+    }
+    if (erroStr.contains('user-not-found') || erroStr.contains('cannot-find-user')) {
+      return "Nenhuma conta localizada com este e-mail.";
+    }
+    if (erroStr.contains('invalid-email')) {
+      return "O formato do e-mail digitado não é válido.";
+    }
+    if (erroStr.contains('weak-password')) {
+      return "A senha precisa ter no mínimo 6 caracteres.";
+    }
+    if (erroStr.contains('network-request-failed') || erroStr.contains('XMLHttpRequest')) {
+      return "Falha de conexão com os servidores do Firebase. Verifique sua internet.";
+    }
+    if (erroStr.contains('operation-not-allowed')) {
+      return "O método de autenticação por E-mail/Senha está DESATIVADO no Console do Firebase.";
+    }
+    if (erroStr.contains('too-many-requests')) {
+      return "Muitas tentativas seguidas. Esta conta foi bloqueada temporariamente.";
+    }
+
+    return "Erro na operação: ${erroStr.replaceAll(RegExp(r'\[.*?\]'), '').trim()}";
+  }
+
+  @override
+  void dispose() {
+    // Fecha a inscrição da stream ao destruir o controlador
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }

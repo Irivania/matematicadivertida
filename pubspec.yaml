@@ -18,6 +18,10 @@ dependencies:
   # 🔊 Áudio e Multimídia (Gamificação)
   audioplayers: ^6.1.0
 
+  # 🎙️ Recursos de Acessibilidade por Voz
+  flutter_tts: ^4.2.2
+  speech_to_text: ^6.6.0
+
   # 💾 Persistência de Dados Local
   shared_preferences: ^2.3.2
 
@@ -33,7 +37,6 @@ dependencies:
   confetti: ^0.8.0
   
   # 🛠️ Annotations e Validações
-  # Corrigido para ^1.17.0 para evitar conflito com flutter_test
   meta: ^1.17.0
 
 dev_dependencies:
@@ -51,11 +54,3 @@ flutter:
     - assets/images/
     - assets/sons/
     - assets/icons/
-
-  # Sugestão de fonte estilo Gamer
-  # fonts:
-  #   - family: Orbitron
-  #     fonts:
-  #       - asset: assets/fonts/Orbitron-Regular.ttf
-  #       - asset: assets/fonts/Orbitron-Bold.ttf
-  #         weight: 700
