@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider';
 import 'package:firebase_core/firebase_core.dart';
 
 // Configuração do Firebase
@@ -12,13 +12,12 @@ import 'package:matematicadivertida/domain/repositories/i_auth_repository.dart';
 import 'package:matematicadivertida/data/services/auth_service.dart';
 import 'package:matematicadivertida/data/repositories/auth_repository_impl.dart';
 import 'package:matematicadivertida/data/services/audio_voice_service.dart';
+import 'package:matematicadivertida/data/models/game_state.dart'; 
 
 // Camada de Presentation (Controladores, Telas e Rotas)
 import 'package:matematicadivertida/presentation/controllers/auth_controller.dart';
 import 'package:matematicadivertida/presentation/auth/login_screen.dart';
-import 'package:matematicadivertida/presentation/auth/cadastro_screen.dart';
 import 'package:matematicadivertida/presentation/screens/perfil_screen.dart';
-import 'package:matematicadivertida/presentation/screens/home_screen.dart'; 
 import 'package:matematicadivertida/presentation/routes/app_routes.dart'; 
 
 void main() async {
@@ -43,7 +42,7 @@ void main() async {
           update: (_, authService, __) => AuthRepositoryImpl(authService),
         ),
 
-        // 3. Controlador de Estado de Autenticação reativo às mudanças do Repositório
+        // 3. Controlado de Estado de Autenticação reativo às mudanças do Repositório
         ChangeNotifierProxyProvider<IAuthRepository, AuthController>(
           create: (context) => AuthController(context.read<IAuthRepository>()),
           update: (_, repository, controller) => controller ?? AuthController(repository),
@@ -52,6 +51,11 @@ void main() async {
         // 4. Provedor do Serviço de Voz (Garante acesso ao TTS e STT globalmente)
         ChangeNotifierProvider<AudioVoiceService>(
           create: (_) => AudioVoiceService(),
+        ),
+
+        // 5. Estado Global do Jogo (Necessário para a JogoScreen)
+        ChangeNotifierProvider<GameState>(
+          create: (_) => GameState(),
         ),
       ],
       child: const MeuApp(),
@@ -71,16 +75,9 @@ class MeuApp extends StatelessWidget {
         brightness: Brightness.dark,
       ),
       
-      // 🗺️ Tabela de Rotas Nomeadas do Aplicativo
-      routes: {
-        // 🚨 CORRIGIDO: A linha do AppRoutes.login foi removida daqui!
-        // Como o parâmetro 'home' abaixo já renderiza a LoginScreen(), 
-        // mantê-la aqui gerava duplicidade com a rota padrão '/' e causava a tela vermelha.
-        
-        AppRoutes.cadastro: (context) => const CadastroScreen(),
-        AppRoutes.perfil: (context) => const PerfilScreen(),
-        AppRoutes.home: (context) => const HomeScreen(),
-      },
+      // 🔄 Intercepta rotas dinâmicas e estáticas com passagem de parâmetros (ex: /home_view, /jogo)
+      // O AppRoutes.routes estático foi removido para evitar colisão com o parâmetro 'home' abaixo
+      onGenerateRoute: AppRoutes.onGenerateRoute,
 
       // ✅ O Consumer decide de forma limpa qual é a tela inicial do app, sem conflitos
       home: Consumer<AuthController>(

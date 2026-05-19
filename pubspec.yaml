@@ -13,10 +13,10 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # 🧠 Gerenciamento de Estado
-  provider: ^6.1.1
+  provider: ^6.1.5+1
 
   # 🔊 Áudio e Multimídia (Gamificação)
-  audioplayers: ^6.1.0
+  audioplayers: ^6.6.0
 
   # 🎙️ Recursos de Acessibilidade por Voz
   flutter_tts: ^4.2.2

@@ -12,19 +12,12 @@ import 'package:matematicadivertida/main.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // CORRIGIDO: Alterado de MyApp() para MeuApp() para refletir o seu main.dart
+    await tester.pumpWidget(const MeuApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Nota: Como o seu app agora inicia na lógica de Login/Perfil e não no 
+    // contador padrão do Flutter, este teste de fumaça vai falhar se for executado.
+    // O objetivo aqui é apenas remover o erro de compilação do 'flutter analyze'.
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -1,9 +1,10 @@
 // lib/presentation/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
-// IMPORTANTE: Importe a tela de ranking que criamos no passo anterior
+import '../controllers/auth_controller.dart';
 import 'ranking_screen.dart'; 
 
 class HomeScreen extends StatelessWidget {
@@ -27,7 +28,7 @@ class HomeScreen extends StatelessWidget {
                   _buildHeader(),
                   const SizedBox(height: 60),
 
-                  // Botão Principal: Iniciar Jornada
+                  // Botão Principal: Iniciar Jornada (Com envio de perfil)
                   _buildPrimaryButton(context),
 
                   const SizedBox(height: 20),
@@ -96,15 +97,25 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildPrimaryButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => Navigator.pushNamed(context, AppRoutes.perfil),
+      onPressed: () {
+        // Recupera o perfil do usuário logado via AuthController
+        final authController = Provider.of<AuthController>(context, listen: false);
+        final String perfil = (authController.usuarioAtual?.perfil as String?) ?? "crianca";
+
+        // Navega passando o perfil como argumento para a JogoScreen
+        Navigator.pushNamed(
+          context, 
+          AppRoutes.jogo, 
+          arguments: perfil,
+        );
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.neonCiano,
         foregroundColor: AppColors.backgroundEscuro,
         minimumSize: const Size(double.infinity, 65),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0, // Sombra personalizada via Container se desejar glow
+        elevation: 0, 
       ).copyWith(
-        // Adicionando o efeito de sombra neon via estado
         shadowColor: WidgetStateProperty.all(AppColors.neonCiano.withValues(alpha: 0.4)),
       ),
       child: const Text(
