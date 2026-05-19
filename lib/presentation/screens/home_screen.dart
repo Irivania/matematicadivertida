@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
                   _buildHeader(),
                   const SizedBox(height: 60),
 
-                  // Botão Principal: Iniciar Jornada (Com envio de perfil)
+                  // Botão Principal: Iniciar Jornada (Com envio de perfil corrigido)
                   _buildPrimaryButton(context),
 
                   const SizedBox(height: 20),
@@ -98,15 +98,43 @@ class HomeScreen extends StatelessWidget {
   Widget _buildPrimaryButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
-        // Recupera o perfil do usuário logado via AuthController
+        // 1. Recupera o controlador de autenticação
         final authController = Provider.of<AuthController>(context, listen: false);
-        final String perfil = (authController.usuarioAtual?.perfil as String?) ?? "crianca";
+        
+        // 2. Cria um fallback seguro em formato String de texto
+        String perfilTexto = "crianca";
 
-        // Navega passando o perfil como argumento para a JogoScreen
+        // 3. Obtém o objeto real do perfil (da classe PerfilUsuario)
+        final perfilObjeto = authController.usuarioAtual?.perfil;
+
+        if (perfilObjeto != null) {
+          // Tratamento dinâmico seguro evitando atribuição direta inválida para o Dart
+          try {
+            final dynamic objDinamico = perfilObjeto;
+            
+            // O Dart vai buscar uma dessas propriedades dentro do seu PerfilUsuario em tempo de execução
+            final extraido = objDinamico.nome ?? objDinamico.tipo ?? objDinamico.id;
+            
+            if (extraido != null) {
+              perfilTexto = extraido.toString().toLowerCase();
+            } else {
+              perfilTexto = perfilObjeto.toString().toLowerCase();
+            }
+          } catch (_) {
+            perfilTexto = perfilObjeto.toString().toLowerCase();
+          }
+        }
+
+        // Sanitização final contra textos vazios
+        if (perfilTexto.trim().isEmpty) {
+          perfilTexto = "crianca";
+        }
+
+        // 4. Navega passando o argumento tratado puramente como String
         Navigator.pushNamed(
           context, 
           AppRoutes.jogo, 
-          arguments: perfil,
+          arguments: perfilTexto,
         );
       },
       style: ElevatedButton.styleFrom(

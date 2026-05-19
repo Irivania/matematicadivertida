@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
-// Imports de Telas (Screens)
-import '../screens/home_screen.dart';
-import '../auth/cadastro_screen.dart'; // Importação oficial da sua tela de cadastro
-import '../screens/perfil_screen.dart';
-import '../screens/nivel_screen.dart';
-import '../screens/trilha_screen.dart';
-import '../screens/jogo_screen.dart';
-import '../screens/ranking_screen.dart';
-import '../screens/crianca_game.dart';
-import '../screens/adulto_game.dart';
-import '../screens/professor_game.dart';
+// Imports de Telas usando caminhos absolutos seguros para Web
+import 'package:matematicadivertida/presentation/screens/home_screen.dart';
+import 'package:matematicadivertida/presentation/auth/cadastro_screen.dart'; 
+import 'package:matematicadivertida/presentation/screens/perfil_screen.dart';
+import 'package:matematicadivertida/presentation/screens/nivel_screen.dart';
+import 'package:matematicadivertida/presentation/screens/trilha_screen.dart';
+import 'package:matematicadivertida/presentation/screens/jogo_screen.dart';
+import 'package:matematicadivertida/presentation/screens/ranking_screen.dart';
+import 'package:matematicadivertida/presentation/screens/crianca_game.dart';
+import 'package:matematicadivertida/presentation/screens/adulto_game.dart';
+import 'package:matematicadivertida/presentation/screens/professor_game.dart';
 
 // Imports de Autenticação
-import '../auth/login_screen.dart'; 
+import 'package:matematicadivertida/presentation/auth/login_screen.dart'; 
 
 class AppRoutes {
   // Constantes de Rota (Nomes Únicos)
@@ -35,10 +35,7 @@ class AppRoutes {
   static Map<String, WidgetBuilder> get routes {
     return {
       login: (_) => const LoginScreen(),
-      
-      // CORRIGIDO: Agora aponta diretamente para a sua tela real criada!
       cadastro: (_) => const CadastroScreen(), 
-      
       home: (_) => const HomeScreen(),
       perfil: (_) => const PerfilScreen(),
       nivel: (_) => const NivelScreen(),
@@ -52,21 +49,45 @@ class AppRoutes {
     };
   }
 
-  /// Gerador de rotas dinâmicas para parâmetros complexos ou animações.
+  /// Gerador de rotas dinâmicas para parâmetros complexos ou extração de dados.
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    // 1. Verifica se a rota chamada existe no mapa estático
+    final builder = routes[settings.name];
+    
+    if (builder != null) {
+      return MaterialPageRoute(
+        settings: settings,
+        builder: builder,
+      );
+    }
+
+    // 2. Tratamento limpo e seguro de rotas dinâmicas (sem reflection/dynamic que quebra no Web)
     switch (settings.name) {
       case jogo:
-        // Permite chamar JogoScreen diretamente passando o perfil como argumento
-        final args = settings.arguments as String? ?? "crianca";
+        String perfilTexto = "crianca";
+
+        // Extração baseada puramente em estruturas nativas estáveis
+        if (settings.arguments is Map) {
+          final argsMap = settings.arguments as Map;
+          final rawPerfil = argsMap["perfil"];
+          if (rawPerfil != null) {
+            perfilTexto = rawPerfil.toString();
+          }
+        } else if (settings.arguments is String) {
+          perfilTexto = settings.arguments as String;
+        }
+
         return MaterialPageRoute(
-          builder: (_) => JogoScreen(perfil: args),
+          settings: settings,
+          builder: (_) => JogoScreen(perfil: perfilTexto),
         );
       
       // Fallback para rotas não encontradas
       default:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(child: Text('Rota não encontrada')),
+          settings: settings,
+          builder: (_) => Scaffold(
+            body: Center(child: Text('Rota não encontrada: ${settings.name}')),
           ),
         );
     }

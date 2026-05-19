@@ -43,8 +43,12 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Inicializa o estado do jogo após o carregamento da tela
-    WidgetsBinding.instance.addPostFrameCallback((_) => _iniciarDesafio());
+    // Inicializa o estado do jogo após o carregamento da tela com segurança assíncrona
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _iniciarDesafio();
+      }
+    });
   }
 
   @override
@@ -68,18 +72,25 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   void _iniciarDesafio() {
     if (!mounted) return;
-    final gameState = context.read<GameState>();
     
-    // Reseta o progresso para uma nova rodada
-    gameState.resetFase(); 
-    
-    setState(() {
-      _jogoAtivo = true;
-      _tempoRestante = 60;
-    });
+    try {
+      final gameState = context.read<GameState>();
+      
+      // Reseta o progresso para uma nova rodada
+      gameState.resetFase(); 
+      
+      setState(() {
+        _jogoAtivo = true;
+        _tempoRestante = 60;
+      });
 
-    _gerarPergunta();
-    _iniciarCronometro();
+      _gerarPergunta();
+      _iniciarCronometro();
+    } catch (_) {
+      setState(() {
+        _jogoAtivo = false;
+      });
+    }
   }
 
   void _pausarJogo() {
@@ -106,20 +117,22 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   }
 
   void _gerarPergunta() {
-    final gameState = context.read<GameState>();
-    
-    final pergunta = _perguntaService.gerar(
-      perfil: widget.perfil,
-      nivel: gameState.nivelParaService,
-      fase: gameState.fase, 
-    );
+    try {
+      final gameState = context.read<GameState>();
+      
+      final pergunta = _perguntaService.gerar(
+        perfil: widget.perfil,
+        nivel: gameState.nivelParaService,
+        fase: gameState.fase, 
+      );
 
-    setState(() {
-      _perguntaAtual = pergunta;
-      _respostaController.clear();
-    });
-    
-    _garantirFoco();
+      setState(() {
+        _perguntaAtual = pergunta;
+        _respostaController.clear();
+      });
+      
+      _garantirFoco();
+    } catch (_) {}
   }
 
   void _validarResposta() {
@@ -324,7 +337,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: LinearProgressIndicator(
-        value: state.indicePerguntaAtual / state.maxPerguntasPorFase,
+        value: state.maxPerguntasPorFase > 0 ? state.indicePerguntaAtual / state.maxPerguntasPorFase : 0,
         backgroundColor: Colors.white24,
         color: Colors.greenAccent,
         minHeight: 6,
