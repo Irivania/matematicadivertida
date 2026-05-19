@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             Navigator.pushReplacementNamed(
               context,
-              AppRoutes.perfil,
+              AppRoutes.home,
             );
           },
           onError: (mensagemErro) {
@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             Navigator.pushReplacementNamed(
               context,
-              AppRoutes.perfil,
+              AppRoutes.home,
             );
           },
           onError: (mensagemErro) {
