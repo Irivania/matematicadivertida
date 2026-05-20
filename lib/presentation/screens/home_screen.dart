@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign:
                 TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black, // AJUSTADO: Cor alterada de Colors.white para Colors.black
               fontSize: 20,
               fontWeight:
                   FontWeight.w900,
@@ -456,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: const Padding(
             padding:
-                EdgeInsets.only(
+                const EdgeInsets.only(
               top: 4,
             ),
             child: Text(
@@ -536,12 +536,17 @@ class _HomeScreenState extends State<HomeScreen> {
             return;
           }
 
+          // FLUXO LINEAR E SEGURO DE ROTAS:
+          // Direciona o jogador para a AppRoutes.perfil (Selecão de Avatar)
+          // empurrando os dados estruturados de modo de forma robusta.
           Navigator.pushNamed(
             context,
             AppRoutes.perfil,
             arguments: {
               'nome': nomeAtual,
               'modo': modo,
+              'isModoDisputa': modo == "disputa",
+              'disputa': modo == "disputa",
             },
           );
         },
@@ -674,8 +679,8 @@ class _HomeScreenState extends State<HomeScreen> {
         style: TextStyle(
           color: Colors.white38,
           fontSize: 12,
-        ),
-      ),
-    );
-  }
+         ),
+       ),
+     );
+   }
 }

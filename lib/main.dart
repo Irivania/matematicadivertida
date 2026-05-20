@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Corrigido: adicionado o .dart
+import 'package:provider/provider.dart'; 
 import 'package:firebase_core/firebase_core.dart';
 
 // Configuração do Firebase
@@ -17,7 +17,7 @@ import 'package:matematicadivertida/data/models/game_state.dart';
 // Camada de Presentation (Controladores, Telas e Rotas)
 import 'package:matematicadivertida/presentation/controllers/auth_controller.dart';
 import 'package:matematicadivertida/presentation/auth/login_screen.dart';
-import 'package:matematicadivertida/presentation/screens/perfil_screen.dart';
+import 'package:matematicadivertida/presentation/screens/home_screen.dart'; // Importado para o novo fluxo
 import 'package:matematicadivertida/presentation/routes/app_routes.dart'; 
 
 void main() async {
@@ -93,9 +93,10 @@ class MeuApp extends StatelessWidget {
             );
           }
 
-          // 2. Estado Autenticado: Usuário logado vai direto para a tela de Perfil para escolher o avatar
+          // 2. Estado Autenticado CORRIGIDO: 
+          // Usuário logado agora cai direto na HomeScreen (Modos de Jogo) para iniciar o novo fluxo linear.
           if (authController.estaAutenticado) {
-            return const PerfilScreen(); 
+            return const HomeScreen(); 
           }
 
           // 3. Estado Desautenticado: Exibe a tela de Login por padrão

@@ -65,21 +65,37 @@ class AppRoutes {
     switch (settings.name) {
       case jogo:
         String perfilTexto = "crianca";
+        bool modoDisputaInjetado = false;
 
         // Extração baseada puramente em estruturas nativas estáveis
         if (settings.arguments is Map) {
           final argsMap = settings.arguments as Map;
+          
           final rawPerfil = argsMap["perfil"];
           if (rawPerfil != null) {
             perfilTexto = rawPerfil.toString();
           }
+
+          // AJUSTE CIRÚRGICO REALIZADO AQUI:
+          // Extrai com segurança as propriedades de modo para que o construtor 
+          // receba a flag real de ativação da disputa sem reverter para o padrão.
+          final rawDisputa = argsMap["isModoDisputa"] ?? argsMap["disputa"];
+          if (rawDisputa is bool) {
+            modoDisputaInjetado = rawDisputa;
+          } else if (argsMap["modo"] != null) {
+            modoDisputaInjetado = argsMap["modo"].toString().toLowerCase().contains('disputa');
+          }
         } else if (settings.arguments is String) {
           perfilTexto = settings.arguments as String;
+          modoDisputaInjetado = perfilTexto.toLowerCase().contains('disputa');
         }
 
         return MaterialPageRoute(
           settings: settings,
-          builder: (_) => JogoScreen(perfil: perfilTexto),
+          builder: (_) => JogoScreen(
+            perfil: perfilTexto,
+            isModoDisputa: modoDisputaInjetado, // Injeção da flag unificada
+          ),
         );
       
       // Fallback para rotas não encontradas

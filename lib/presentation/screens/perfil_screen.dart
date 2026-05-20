@@ -63,8 +63,9 @@ class _PerfilScreenState
     _nomeUsuario =
         args?['nome'] ?? "Visitante";
 
-    _modo =
-        args?['modo'] ?? "Treino";
+    // Trata e normaliza o texto recebido para garantir consistência visual
+    final String modoCru = args?['modo'] ?? "treino";
+    _modo = modoCru.toLowerCase().contains('disputa') ? "Disputa 🏆" : "Treino";
   }
 
   @override
@@ -137,7 +138,7 @@ class _PerfilScreenState
           ),
 
           // =====================================
-          // BOTÃO VOLTAR
+          // BOTÃO VOLTAR (CORRIGIDO: Evita tela branca forçando o retorno para a Home)
           // =====================================
           Positioned(
             top: 20,
@@ -149,10 +150,8 @@ class _PerfilScreenState
                 size: 35,
               ),
               onPressed: () {
-                Navigator.of(context)
-                    .pushReplacementNamed(
-                  '/home_view',
-                );
+                // Substitui a rota atual garantindo que o app vá para a Home em vez de quebrar a pilha
+                Navigator.of(context).pushReplacementNamed('/home_view');
               },
             ),
           ),
@@ -364,6 +363,8 @@ class _PerfilScreenState
             );
 
             if (mounted) {
+              final bool verificaDisputa = _modo.toLowerCase().contains('disputa');
+
               Navigator.of(context)
                   .pushReplacementNamed(
                 '/jogo',
@@ -371,7 +372,9 @@ class _PerfilScreenState
                   'nome':
                       _nomeUsuario,
                   'perfil': perfil,
-                  'modo': _modo,
+                  'modo': verificaDisputa ? 'disputa' : 'treino',
+                  'isModoDisputa': verificaDisputa,
+                  'disputa': verificaDisputa,
                 },
               );
             }

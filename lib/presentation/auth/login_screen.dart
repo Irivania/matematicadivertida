@@ -44,9 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
           onSuccess: () {
             if (!mounted) return;
 
-            Navigator.pushReplacementNamed(
+            // FLUXO LINEAR SEGURO: Limpa toda a pilha de telas e força a inicialização na HomeScreen
+            Navigator.pushNamedAndRemoveUntil(
               context,
               AppRoutes.home,
+              (route) => false,
             );
           },
           onError: (mensagemErro) {
@@ -94,9 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
           onSuccess: () {
             if (!mounted) return;
 
-            Navigator.pushReplacementNamed(
+            // FLUXO LINEAR SEGURO: Limpa toda a pilha de telas e força a inicialização na HomeScreen
+            Navigator.pushNamedAndRemoveUntil(
               context,
               AppRoutes.home,
+              (route) => false,
             );
           },
           onError: (mensagemErro) {
@@ -152,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 // =========================
-                // OVERLAY ESCURO
+                // OVERLAY ESCURO (AJUSTADO: Opacidade reduzida de 0.45 para 0.15 para clarear o fundo)
                 // =========================
                 Positioned.fill(
                   child: Container(
@@ -162,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.45),
+                          Colors.black.withOpacity(0.15),
                         ],
                       ),
                     ),
@@ -264,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
 
                                         const SizedBox(
-                                            height: 25),
+                                          height: 25),
 
                                         // =========================
                                         // E-MAIL
@@ -341,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
 
                                         const SizedBox(
-                                            height: 16),
+                                          height: 16),
 
                                         // =========================
                                         // SENHA
