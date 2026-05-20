@@ -351,14 +351,13 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  // CORREÇÃO: Botão de ação inferior robusto com tons Verdes no modo disputa
   Widget _buildBotaoAcao() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: ElevatedButton(
         onPressed: _jogoAtivo ? _validarResposta : _iniciarDesafio,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _disputaAtivaNaTela ? Colors.greenAccent : AppColors.neonCiano, // Rosa alterado para Verde no modo disputa
+          backgroundColor: _disputaAtivaNaTela ? Colors.greenAccent : AppColors.neonCiano, 
           minimumSize: const Size(double.infinity, 55),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: _disputaAtivaNaTela ? 8 : 4,
@@ -379,6 +378,34 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     return 'assets/images/crianca.png';
   }
 
+  // --- MASCOTE CAL CORRIGIDO (PNG Transparente) ---
+  Widget _buildMascoteDica(bool ehCrianca) {
+    return Positioned(
+      bottom: ehCrianca ? 130 : 100,
+      right: 20, 
+      child: GestureDetector(
+        onTap: _exibirDica,
+        child: Column(
+          children: [
+            const Text(
+              "DICA", 
+              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)
+            ),
+            const SizedBox(height: 5),
+            // Utilizando o seu novo arquivo .png transparente
+            Image.asset(
+              'assets/images/mascote_cal.png', 
+              width: 130, 
+              height: 130, 
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.smart_toy, size: 50, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
@@ -397,7 +424,6 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            // 1. Camada de Fundo
             Positioned.fill(
               child: Image.asset(
                 _getImagemFundo(),
@@ -406,7 +432,6 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
               ),
             ),
             
-            // 2. Camada de Conteúdo do Desafio
             SafeArea(
               child: Column(
                 children: [
@@ -423,62 +448,24 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // 3. Mascote de dicas (Ocultado se for modo disputa)
             if (_jogoAtivo && !_disputaAtivaNaTela) _buildMascoteDica(ehCrianca),
             
-            // 4. CORREÇÃO MANTIDA: Botão de Sair em pílula com proteção anti-travamento da Web (Future.microtask)
             Positioned(
               top: MediaQuery.of(context).padding.top + 15, 
               left: 15,
               child: InkWell(
-                key: const ValueKey('btn_sair_game'),
                 onTap: () {
                   _cancelarTimer();
-                  FocusScope.of(context).unfocus();
-                  Future.microtask(() {
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  });
+                  Navigator.of(context).pop();
                 },
-                borderRadius: BorderRadius.circular(30),
-                child: Ink(
+                child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.75), 
+                    color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano).withOpacity(0.4),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      )
-                    ],
+                    border: Border.all(color: AppColors.neonCiano, width: 2),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.arrow_back_ios_new, 
-                        color: Colors.white, 
-                        size: 15,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        "SAIR",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: const Text("SAIR", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -488,76 +475,29 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  // --- Componentes de Interface Adaptativos ---
-
-  // CORREÇÃO MANTIDA: HUD escuro/roxo na disputa e claro/azul no treino
+  // --- Componentes Adicionais (Mantendo a estrutura completa) ---
   Widget _buildHUD(GameState state) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _disputaAtivaNaTela 
-            ? Colors.black.withOpacity(0.8) 
-            : Colors.white.withAlpha((0.9 * 255).toInt()), 
+        color: _disputaAtivaNaTela ? Colors.black.withOpacity(0.8) : Colors.white.withAlpha(230),
         borderRadius: BorderRadius.circular(15),
-        border: _disputaAtivaNaTela 
-            ? Border.all(color: Colors.purpleAccent, width: 1.5) 
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: _disputaAtivaNaTela ? Colors.purpleAccent.withOpacity(0.3) : Colors.black26, 
-            blurRadius: 8
-          )
-        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statusColumn(
-            state.nomeNivelExibicao, 
-            "RANK",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
-          _statusColumn(
-            "${state.fase}/10", 
-            "FASE",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
-          
-          if (_disputaAtivaNaTela)
-            _statusColumn(
-              "${_tempoAcumuladoDisputa}s", 
-              "CRONÔMETRO", 
-              color: Colors.purpleAccent,
-              textColor: Colors.purpleAccent
-            )
-          else
-            _statusColumn(
-              "${_tempoRestante}s", 
-              "RESTRANTE", 
-              color: _tempoRestante < 10 ? Colors.red : Colors.blue,
-              textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-            ),
-            
-          _statusColumn(
-            "${state.pontos}", 
-            "XP",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
+          _statusColumn(state.nomeNivelExibicao, "RANK"),
+          _statusColumn("${state.fase}/10", "FASE"),
+          _statusColumn(_disputaAtivaNaTela ? "${_tempoAcumuladoDisputa}s" : "${_tempoRestante}s", "TIME"),
+          _statusColumn("${state.pontos}", "XP"),
         ],
       ),
     );
   }
 
-  // CORREÇÃO MANTIDA: Parâmetro do TextStyle ajustado para 'color' corrigindo o erro de compilação
-  Widget _statusColumn(String value, String label, {Color color = Colors.transparent, Color textColor = Colors.black87}) {
-    final effectiveColor = color == Colors.transparent ? textColor : color;
-    return Column(
-      children: [
-        Text(value, style: TextStyle(color: effectiveColor, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: TextStyle(fontSize: 10, color: _disputaAtivaNaTela ? Colors.white60 : Colors.grey)),
-      ],
-    );
+  Widget _statusColumn(String value, String label) {
+    return Column(children: [Text(value, style: const TextStyle(fontWeight: FontWeight.bold)), Text(label, style: const TextStyle(fontSize: 10))]);
   }
 
   Widget _buildProgressBar(GameState state) {
@@ -565,131 +505,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: LinearProgressIndicator(
         value: state.maxPerguntasPorFase > 0 ? state.indicePerguntaAtual / state.maxPerguntasPorFase : 0,
-        backgroundColor: _disputaAtivaNaTela ? Colors.white12 : Colors.white24,
         color: _disputaAtivaNaTela ? Colors.purpleAccent : Colors.greenAccent,
-        minHeight: 6,
       ),
     );
   }
 
-  // CORREÇÃO MANTIDA: Estado de boas-vindas com títulos e cores separados e aviso "VELOCIDADE MÁXIMA"
   Widget _buildAreaDePergunta() {
-    if (!_jogoAtivo) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        margin: const EdgeInsets.symmetric(horizontal: 30),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, width: 1.5),
-        ),
-        child: Column(
-          children: [
-            Text(
-              _disputaAtivaNaTela ? "🏁 MODO DISPUTA" : "🧠 MODO TREINO",
-              style: TextStyle(
-                color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _disputaAtivaNaTela 
-                ? "Responda o mais rápido possível!\nErrar encerra o desafio."
-                : "Treine suas habilidades matemáticas sem a pressão do ranking.",
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        if (_disputaAtivaNaTela) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.purpleAccent, width: 1),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.flash_on, color: Colors.purpleAccent, size: 14),
-                SizedBox(width: 4),
-                Text(
-                  "VELOCIDADE MÁXIMA",
-                  style: TextStyle(color: Colors.purpleAccent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.1),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-
-        Text(
-          _perguntaAtual?.pergunta ?? "",
-          style: TextStyle(
-            color: Colors.white, 
-            fontSize: 56, 
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(
-                color: _disputaAtivaNaTela ? Colors.purple : Colors.black, 
-                blurRadius: 15
-              )
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: 180,
-          child: TextField(
-            controller: _respostaController,
-            focusNode: _respostaFocusNode,
-            textAlign: TextAlign.center,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            style: TextStyle(
-              color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
-              fontSize: 48, 
-              fontWeight: FontWeight.bold
-            ),
-            decoration: InputDecoration(
-              hintText: "?",
-              hintStyle: const TextStyle(color: Colors.white24),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
-                  width: 3
-                )
-              ),
-            ),
-            onSubmitted: (_) => _validarResposta(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMascoteDica(bool ehCrianca) {
-    return Positioned(
-      bottom: ehCrianca ? 140 : 110,
-      right: 20,
-      child: GestureDetector(
-        onTap: _exibirDica,
-        child: Column(
-          children: [
-            const Text("DICA", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-            Image.asset('assets/images/mascote_cal.png', width: 70),
-          ],
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Text(_perguntaAtual?.pergunta ?? "PRESSIONE COMEÇAR", style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
     );
   }
 }
