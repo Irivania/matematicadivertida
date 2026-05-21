@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 // Camadas de Dados e Domínio
 import '../../../data/services/pergunta_service.dart';
@@ -32,6 +34,10 @@ class JogoScreen extends StatefulWidget {
 class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   final _perguntaService = PerguntaService();
 
+  // Instâncias de Acessibilidade de Áudio
+  final FlutterTts _flutterTts = FlutterTts();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
   // Gerenciamento de Estado Local
   Pergunta? _perguntaAtual;
   final _respostaController = TextEditingController();
@@ -41,6 +47,10 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   Timer? _timer;
   int _tempoRestante = 60; // 1 minuto limite por fase
   bool _jogoAtivo = false;
+  bool _estaOuvindoMicrofone = false;
+
+  // TRAVA DE SEGURANÇA: Guarda o texto da última pergunta lida para evitar duplicação por concorrência de estado
+  String _ultimaPerguntaFalada = "";
 
   // Cronômetro progressivo que conta os segundos que o jogador levou para terminar a fase
   int _tempoAcumuladoDisputa = 0;
@@ -52,11 +62,10 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initMotoresVoz();
     
-    // CORREÇÃO MANTIDA: Acumula a flag vinda do construtor ou do texto do perfil de forma segura
     _disputaAtivaNaTela = widget.isModoDisputa || widget.perfil.toLowerCase().contains('disputa');
     
-    // CORREÇÃO MANTIDA: O jogo aguarda o clique inicial no botão para começar. Preparamos o foco do teclado.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _geralFocusNode.requestFocus();
@@ -64,10 +73,21 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Inicializa as configurações de fala e linguagem regional dos motores de áudio
+  Future<void> _initMotoresVoz() async {
+    try {
+      await _flutterTts.setLanguage("pt-BR");
+      await _flutterTts.setSpeechRate(0.55); // Velocidade de leitura confortável
+      await _speech.initialize();
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cancelarTimer();
+    _flutterTts.stop();
+    _speech.stop();
     _respostaController.dispose();
     _respostaFocusNode.dispose();
     _geralFocusNode.dispose();
@@ -83,23 +103,84 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   // --- Lógica de Fluxo do Jogo ---
 
+  /// Executa o sintetizador de voz de forma blindada contra múltiplas chamadas simultâneas
+  Future<void> _falarPerguntaAtual() async {
+    if (_perguntaAtual == null) return;
+
+    // Se o texto da pergunta for idêntico ao que acabou de ser falado, aborta a execução duplicada
+    if (_ultimaPerguntaFalada == _perguntaAtual!.pergunta) {
+      return; 
+    }
+
+    // Registra a pergunta atual na trava de segurança
+    _ultimaPerguntaFalada = _perguntaAtual!.pergunta;
+
+    await _flutterTts.stop();
+
+    // Substitui sinais de operação por palavras para o motor pronunciar corretamente
+    String textoParaFalar = _perguntaAtual!.pergunta
+        .replaceAll('+', ' mais ')
+        .replaceAll('-', ' menos ')
+        .replaceAll('x', ' vezes ')
+        .replaceAll('/', ' dividido por ');
+        
+    await _flutterTts.speak("Quanto é $textoParaFalar ?");
+  }
+
+  /// Ativa a captação do microfone por SpeechToText para ditar a resposta falada
+  Future<void> _escutarRespostaVoz() async {
+    final gameState = context.read<GameState>();
+    if (!_estaOuvindoMicrofone) {
+      bool disponivel = await _speech.initialize();
+      if (disponivel) {
+        setState(() => _estaOuvindoMicrofone = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              String processado = gameState.normalizarRespostaFalada(val.recognizedWords);
+              _respostaController.text = processado;
+            });
+            // Se o motor finalizar e capturar um resultado estável, valida automaticamente
+            if (val.finalResult) {
+              setState(() => _estaOuvindoMicrofone = false);
+              _validarResposta();
+            }
+          },
+          localeId: "pt_BR",
+        );
+      }
+    } else {
+      setState(() => _estaOuvindoMicrofone = false);
+      _speech.stop();
+    }
+  }
+
   void _iniciarDesafio() {
     if (!mounted) return;
     
     try {
       final gameState = context.read<GameState>();
-      
-      // Reseta o progresso da fase atual ao iniciar/reiniciar
       gameState.resetFase(); 
       
       setState(() {
         _jogoAtivo = true;
-        _tempoRestante = 60; // Garante 1 minuto regulamentar no início da fase
-        _tempoAcumuladoDisputa = 0; // Reseta o cronômetro progressivo da disputa
+        _tempoRestante = 60;
+        _tempoAcumuladoDisputa = 0;
+        _ultimaPerguntaFalada = ""; // Reseta a trava ao iniciar uma nova partida
       });
 
       _gerarPergunta();
       _iniciarCronometro();
+
+      // PROTEÇÃO WEB MANTIDA: Como o botão recebeu uma ação direta do usuário, 
+      // o leitor de voz agora tem permissão do navegador para ler sem travar
+      if (gameState.acessibilidadeVoz) {
+        _falarPerguntaAtual().then((_) {
+          Future.delayed(const Duration(milliseconds: 1800), () {
+            if (mounted && _jogoAtivo && gameState.acessibilidadeVoz) _escutarRespostaVoz();
+          });
+        });
+      }
     } catch (_) {
       setState(() {
         _jogoAtivo = false;
@@ -122,17 +203,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted || !_jogoAtivo) return;
       
-      // Se o tempo da fase acabar (1 minuto), ambos os modos sofrem Game Over
       if (_tempoRestante <= 0) {
         _finalizarPorTempo();
         return;
       }
 
       setState(() {
-        _tempoRestante--; // Ambos os modos decrementam o limite de 1 minuto da fase
-        
+        _tempoRestante--; 
         if (_disputaAtivaNaTela) {
-          _tempoAcumuladoDisputa++; // A disputa monitora o tempo progressivo gasto
+          _tempoAcumuladoDisputa++; 
         }
       });
     });
@@ -152,6 +231,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         _perguntaAtual = pergunta;
         _respostaController.clear();
       });
+
+      // Se mudar de pergunta durante o jogo rodando com voz ativa
+      if (gameState.acessibilidadeVoz && _ultimaPerguntaFalada != pergunta.pergunta && _respostaController.text.isEmpty) {
+        _falarPerguntaAtual().then((_) {
+          Future.delayed(const Duration(milliseconds: 1800), () {
+            if (mounted && _jogoAtivo && gameState.acessibilidadeVoz) _escutarRespostaVoz();
+          });
+        });
+      }
       
       _garantirFoco();
     } catch (_) {}
@@ -174,12 +262,9 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   void _processarAcerto() {
     final gameState = context.read<GameState>();
-    
-    // Passa o tempo restante para cálculo de XP no modo treino
     gameState.registrarAcerto(tempoRestante: _tempoRestante);
     HapticFeedback.mediumImpact();
 
-    // Se respondeu as 10 perguntas da fase, conclui
     if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {
       _concluirFase();
     } else {
@@ -190,29 +275,33 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   void _processarErro(String correta) {
     _cancelarTimer();
-    setState(() => _jogoAtivo = false);
-
+    _speech.stop();
+    _flutterTts.stop(); 
+    setState(() {
+      _jogoAtivo = false;
+      _estaOuvindoMicrofone = false;
+    });
     final gameState = context.read<GameState>();
 
     if (_disputaAtivaNaTela) {
-      // Regra da Disputa: Errou 1 única vez = Erro fatal e fim de jogo imediato!
       _exibirDialogo(
         _encapsularComTecladoDialog(
           ErrorDialog(
-            mensagem: "🎯 Erro Fatal! No Modo Disputa você não pode errar nenhuma resposta. Tente novamente!",
+            mensagem: "🎯 Erro Fatal! No Modo Disputa você não pode errar. O desafio foi resetado para a Fase 1 deste Rank!",
             onRetry: () {
               Navigator.pop(context);
+              gameState.recomecarNivelAtual(); 
               _iniciarDesafio();
             },
           ),
           onEnterPressed: () {
             Navigator.pop(context);
+            gameState.recomecarNivelAtual();
             _iniciarDesafio();
           },
         ),
       );
     } else {
-      // Modo Treino: Desconta uma vida no GameState e permite continuar se ainda tiver vidas
       gameState.registrarErro();
       _exibirDialogo(
         _encapsularComTecladoDialog(
@@ -234,21 +323,29 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   void _finalizarPorTempo() {
     _cancelarTimer();
-    setState(() => _jogoAtivo = false);
+    _speech.stop();
+    _flutterTts.stop(); 
+    setState(() {
+      _jogoAtivo = false;
+      _estaOuvindoMicrofone = false;
+    });
+    final gameState = context.read<GameState>();
     
     _exibirDialogo(
       _encapsularComTecladoDialog(
         ErrorDialog(
           mensagem: _disputaAtivaNaTela 
-              ? "⌛ O tempo de 1 minuto esgotou! Você precisa ser mais rápido no Modo Disputa."
+              ? "⌛ O tempo esgotou! No modo disputa, estourar 1 minuto causa reset total do Rank!"
               : "⌛ Seu tempo de 1 minuto acabou!",
           onRetry: () {
             Navigator.pop(context);
+            if (_disputaAtivaNaTela) gameState.recomecarNivelAtual();
             _iniciarDesafio();
           },
         ),
         onEnterPressed: () {
           Navigator.pop(context);
+          if (_disputaAtivaNaTela) gameState.recomecarNivelAtual();
           _iniciarDesafio();
         },
       ),
@@ -257,35 +354,74 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   void _concluirFase() {
     _cancelarTimer();
-    setState(() => _jogoAtivo = false);
+    _speech.stop();
+    _flutterTts.stop(); 
+    setState(() {
+      _jogoAtivo = false;
+      _estaOuvindoMicrofone = false;
+    });
     
     final gameState = context.read<GameState>();
     bool foiRecorde = false;
+    bool nivelConcluido = false;
 
     if (_disputaAtivaNaTela) {
-      // Grava o tempo que ele levou para terminar e verifica se quebrou o recorde do nível
-      foiRecorde = gameState.verificarESalvarRecordeDesteNivel(
-        gameState.nivelAtual, 
-        _tempoAcumuladoDisputa,
-      );
+      gameState.acumularTempoDaFase(_tempoAcumuladoDisputa);
+      if (gameState.fase == gameState.maxFasesPorNivel) {
+        foiRecorde = gameState.verificarESalvarRecordeDoNivelCompleto(gameState.nivelAtual);
+        nivelConcluido = true;
+      }
     }
+
+    String titulo = nivelConcluido 
+        ? "🏆 NÍVEL ${gameState.nivel.toUpperCase()} CONCLUÍDO!" 
+        : "Fase ${gameState.fase} Concluída!";
 
     _exibirDialogo(
       _encapsularComTecladoDialog(
-        SuccessDialog(
-          acertos: gameState.acertosNaFase,
-          // Passa o tempo progressivo gasto apenas se for Modo Disputa
-          tempoGasto: _disputaAtivaNaTela ? Duration(seconds: _tempoAcumuladoDisputa) : null,
-          isRecordePessoal: foiRecorde, 
-          onNext: () {
-            Navigator.pop(context);
-            gameState.concluirEAvancarFase(); 
-            _iniciarDesafio();
-          },
+        AlertDialog(
+          backgroundColor: AppColors.backgroundEscuro,
+          title: Text(titulo, style: const TextStyle(color: AppColors.neonCiano, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Você acertou ${gameState.acertosNaFase} questões!", style: const TextStyle(color: Colors.white)),
+              if (_disputaAtivaNaTela) ...[
+                const SizedBox(height: 10),
+                Text("Tempo nesta fase: ${_tempoAcumuladoDisputa}s", style: const TextStyle(color: Colors.purpleAccent)),
+                if (foiRecorde) ...[
+                  const SizedBox(height: 10),
+                  const Text("✨ PARABÉNS! NOVO RECORDE GLOBAL! ✨", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                ]
+              ]
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                gameState.recomecarNivelAtual();
+                _iniciarDesafio();
+              },
+              child: Text(
+                nivelConcluido ? "RECORRER / MELHORAR TEMPO" : "RECOMEÇAR RANK DO ZERO", 
+                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                gameState.concluirEAvancarFase();
+                _iniciarDesafio();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.neonCiano),
+              child: Text(nivelConcluido ? "PRÓXIMO NÍVEL" : "PRÓXIMA FASE", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
         onEnterPressed: () {
           Navigator.pop(context);
-          gameState.concluirEAvancarFase(); 
+          gameState.concluirEAvancarFase();
           _iniciarDesafio();
         },
       ),
@@ -306,15 +442,12 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       barrierDismissible: false,
       builder: (context) => dialog,
     ).then((_) {
-      // Garante o retorno do foco do teclado principal ao fechar qualquer pop-up
       if (mounted) {
         _geralFocusNode.requestFocus();
       }
     });
   }
 
-  /// Método utilitário auxiliar para capturar o clique do Enter de forma isolada 
-  /// sobre os pop-ups nativos do Flutter sem precisar modificar os arquivos internos dos Diálogos.
   Widget _encapsularComTecladoDialog(Widget child, {required VoidCallback onEnterPressed}) {
     final FocusNode dialogFocus = FocusNode();
     dialogFocus.requestFocus();
@@ -351,21 +484,24 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  // CORREÇÃO: Botão de ação inferior robusto com tons Verdes no modo disputa
   Widget _buildBotaoAcao() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: ElevatedButton(
-        onPressed: _jogoAtivo ? _validarResposta : _iniciarDesafio,
+        onPressed: _estaOuvindoMicrofone ? _escutarRespostaVoz : (_jogoAtivo ? _validarResposta : _iniciarDesafio),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _disputaAtivaNaTela ? Colors.greenAccent : AppColors.neonCiano, 
+          backgroundColor: _estaOuvindoMicrofone 
+              ? Colors.redAccent 
+              : (_disputaAtivaNaTela ? Colors.greenAccent : AppColors.neonCiano), 
           minimumSize: const Size(double.infinity, 55),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: _disputaAtivaNaTela ? 8 : 4,
           shadowColor: _disputaAtivaNaTela ? Colors.greenAccent.withOpacity(0.5) : Colors.black38,
         ),
         child: Text(
-          _jogoAtivo ? "CONFIRMAR" : "COMEÇAR AGORA",
+          _estaOuvindoMicrofone 
+              ? "🎤 OUVINDO... CLIQUE PARA PARAR" 
+              : (_jogoAtivo ? "CONFIRMAR" : "COMEÇAR AGORA"),
           style: const TextStyle(color: AppColors.backgroundEscuro, fontWeight: FontWeight.bold),
         ),
       ),
@@ -388,8 +524,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       focusNode: _geralFocusNode,
       onKeyEvent: (event) {
         if (event is KeyDownEvent && 
-           (event.logicalKey == LogicalKeyboardKey.enter || 
-            event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+            (event.logicalKey == LogicalKeyboardKey.enter || 
+             event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
           _jogoAtivo ? _validarResposta() : _iniciarDesafio();
         }
       },
@@ -423,8 +559,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // 3. Mascote de dicas (Ocultado se for modo disputa)
-            if (_jogoAtivo && !_disputaAtivaNaTela) _buildMascoteDica(ehCrianca),
+            // 3. Mascote de dicas
+            if (_jogoAtivo && !_disputaAtivaNaTela) _buildMascoteDica(widget.perfil),
             
             // 4. Botão de Sair com proteção anti-travamento da Web
             Positioned(
@@ -434,6 +570,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
                 key: const ValueKey('btn_sair_game'),
                 onTap: () {
                   _cancelarTimer();
+                  _flutterTts.stop();
+                  _speech.stop();
                   FocusScope.of(context).unfocus();
                   Future.microtask(() {
                     if (context.mounted) {
@@ -451,35 +589,49 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
                       color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
                       width: 2,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano).withOpacity(0.4),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      )
-                    ],
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.arrow_back_ios_new, 
-                        color: Colors.white, 
-                        size: 15,
-                      ),
+                      Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 15),
                       SizedBox(width: 8),
-                      Text(
-                        "SAIR",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
+                      Text("SAIR", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                     ],
                   ),
                 ),
+              ),
+            ),
+
+            // 5. Botão Flutuante Superior de Modo de Acessibilidade por Voz (Fone/Microfone)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 15,
+              right: 15,
+              child: IconButton(
+                icon: CircleAvatar(
+                  backgroundColor: gameState.acessibilidadeVoz ? Colors.greenAccent : Colors.black87,
+                  radius: 25,
+                  child: Icon(
+                    gameState.acessibilidadeVoz ? Icons.headset_mic : Icons.headset_off, 
+                    color: gameState.acessibilidadeVoz ? Colors.black : Colors.white, 
+                    size: 24
+                  ),
+                ),
+                onPressed: () {
+                  gameState.alternarAcessibilidadeVoz();
+                  if (gameState.acessibilidadeVoz) {
+                    _ultimaPerguntaFalada = ""; // Reseta o cache ao forçar o clique manual do botão
+                    if (_jogoAtivo) {
+                      _falarPerguntaAtual();
+                    }
+                  } else {
+                    _flutterTts.stop();
+                    _speech.stop();
+                    setState(() {
+                      _estaOuvindoMicrofone = false;
+                      _ultimaPerguntaFalada = "";
+                    });
+                  }
+                },
               ),
             ),
           ],
@@ -495,54 +647,19 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _disputaAtivaNaTela 
-            ? Colors.black.withOpacity(0.8) 
-            : Colors.white.withAlpha((0.9 * 255).toInt()), 
+        color: _disputaAtivaNaTela ? Colors.black.withOpacity(0.8) : Colors.white.withAlpha(230), 
         borderRadius: BorderRadius.circular(15),
-        border: _disputaAtivaNaTela 
-            ? Border.all(color: Colors.purpleAccent, width: 1.5) 
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: _disputaAtivaNaTela ? Colors.purpleAccent.withOpacity(0.3) : Colors.black26, 
-            blurRadius: 8
-          )
-        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceAround, // CORREÇÃO: Sintaxe corrigida de 'Main => spaceAround' para 'MainAxisAlignment.spaceAround'
         children: [
-          _statusColumn(
-            state.nomeNivelExibicao, 
-            "RANK",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
-          _statusColumn(
-            "${state.fase}/10", 
-            "FASE",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
-          
+          _statusColumn(state.nomeNivelExibicao, "RANK", textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87),
+          _statusColumn("${state.fase}/10", "FASE", textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87),
           if (_disputaAtivaNaTela)
-            _statusColumn(
-              "${_tempoAcumuladoDisputa}s", 
-              "CRONÔMETRO", 
-              color: Colors.purpleAccent,
-              textColor: Colors.purpleAccent
-            )
+            _statusColumn("${_tempoAcumuladoDisputa}s", "TIME", color: Colors.purpleAccent, textColor: Colors.purpleAccent)
           else
-            _statusColumn(
-              "${_tempoRestante}s", 
-              "RESTRANTE", 
-              color: _tempoRestante < 10 ? Colors.red : Colors.blue,
-              textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-            ),
-            
-          _statusColumn(
-            "${state.pontos}", 
-            "XP",
-            textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87
-          ),
+            _statusColumn("${_tempoRestante}s", "RESTRANTE", color: _tempoRestante < 10 ? Colors.red : Colors.blue, textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87),
+          _statusColumn("${state.pontos}", "XP", textColor: _disputaAtivaNaTela ? Colors.white : Colors.black87),
         ],
       ),
     );
@@ -563,14 +680,11 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: LinearProgressIndicator(
         value: state.maxPerguntasPorFase > 0 ? state.indicePerguntaAtual / state.maxPerguntasPorFase : 0,
-        backgroundColor: _disputaAtivaNaTela ? Colors.white12 : Colors.white24,
         color: _disputaAtivaNaTela ? Colors.purpleAccent : Colors.greenAccent,
-        minHeight: 6,
       ),
     );
   }
 
-  // --- Área de Pergunta ---
   Widget _buildAreaDePergunta() {
     if (!_jogoAtivo) {
       return Container(
@@ -585,18 +699,11 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
           children: [
             Text(
               _disputaAtivaNaTela ? "🏁 MODO DISPUTA" : "🧠 MODO TREINO",
-              style: TextStyle(
-                color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2
-              ),
+              style: TextStyle(color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              _disputaAtivaNaTela 
-                ? "Responda o mais rápido possível!\nErrar encerra o desafio."
-                : "Treine suas habilidades matemáticas sem a pressão do ranking.",
+              _disputaAtivaNaTela ? "Responda o mais rápido possível!\nErrar encerra o desafio." : "Treine suas habilidades matemáticas.",
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
@@ -610,39 +717,15 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         if (_disputaAtivaNaTela) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.purpleAccent, width: 1),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.flash_on, color: Colors.purpleAccent, size: 14),
-                SizedBox(width: 4),
-                Text(
-                  "VELOCIDADE MÁXIMA",
-                  style: TextStyle(color: Colors.purpleAccent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.1),
-                ),
-              ],
-            ),
+            decoration: BoxDecoration(color: Colors.purple.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
+            child: const Text("VELOCIDADE MÁXIMA", style: TextStyle(color: Colors.purpleAccent, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 10),
         ],
 
         Text(
           _perguntaAtual?.pergunta ?? "",
-          style: TextStyle(
-            color: Colors.white, 
-            fontSize: 56, 
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(
-                color: _disputaAtivaNaTela ? Colors.purple : Colors.black, 
-                blurRadius: 15
-              )
-            ],
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 56, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
         SizedBox(
@@ -653,21 +736,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
             textAlign: TextAlign.center,
             autofocus: true,
             keyboardType: TextInputType.number,
-            style: TextStyle(
-              color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
-              fontSize: 48, 
-              fontWeight: FontWeight.bold
-            ),
-            decoration: InputDecoration(
-              hintText: "?",
-              hintStyle: const TextStyle(color: Colors.white24),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, 
-                  width: 3
-                )
-              ),
-            ),
+            style: TextStyle(color: _disputaAtivaNaTela ? Colors.purpleAccent : AppColors.neonCiano, fontSize: 48, fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(hintText: "?", hintStyle: TextStyle(color: Colors.white24)),
             onSubmitted: (_) => _validarResposta(),
           ),
         ),
@@ -675,28 +745,20 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  // --- Renderização do Cal Estilizada (Sem arquivo de imagem para evitar travamentos) ---
-  Widget _buildMascoteDica(bool ehCrianca) {
+  Widget _buildMascoteDica(String perfil) {
+    double bottomPos = perfil.toLowerCase().contains('crian') ? 130 : 150;
     return Positioned(
-      bottom: ehCrianca ? 130 : 100,
+      bottom: bottomPos,
       right: 15, 
       child: GestureDetector(
         onTap: _exibirDica,
         child: Column(
           children: [
-            const Text(
-              "DICA", 
-              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)
-            ),
+            const Text("DICA DO MASCOTE", style: TextStyle(color: Colors.red, fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Container(
-              width: 120, height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.neonCiano, width: 3),
-              ),
-              child: const Icon(Icons.smart_toy, color: AppColors.neonCiano, size: 60),
+              decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.white.withOpacity(0.8), blurRadius: 10, spreadRadius: 2)]),
+              child: Image.asset('assets/images/mascote_cal.png', width: 120, height: 120, fit: BoxFit.contain, errorBuilder: (c, e, s) => const Icon(Icons.smart_toy, size: 60, color: Colors.white)),
             ),
           ],
         ),

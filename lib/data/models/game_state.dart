@@ -1,3 +1,5 @@
+// lib/data/models/game_state.dart
+
 import 'package:flutter/material.dart';
 import '../../domain/usecases/calcular_pontuacao_usecase.dart';
 import '../../core/enums/nivel_enum.dart';
@@ -21,12 +23,32 @@ class GameState extends ChangeNotifier {
   String perfil = "crianca";
 
   // ---------------------------------------------------
+  // ESTADO DE ACESSIBILIDADE (NOVO)
+  // ---------------------------------------------------
+  /// Controla se a leitura de perguntas e captação de resposta por voz estão ativas
+  bool acessibilidadeVoz = false;
+
+  /// Alterna o estado do modo de acessibilidade por voz
+  void alternarAcessibilidadeVoz() {
+    acessibilidadeVoz = !acessibilidadeVoz;
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------
   // ESTADO DO MODO DISPUTA (NOVO)
   // ---------------------------------------------------
-  /// Guarda o menor tempo (em segundos) que o jogador levou para completar 
-  /// TODAS as perguntas de um nível específico.
-  /// Chave: Nome do nível (String), Valor: Tempo em segundos (int).
   final Map<String, int> _recordesTempoPorNivel = {};
+  int _tempoAcumuladoDoNivelAtual = 0;
+
+  Map<String, int> get recordesPorNivel => Map.unmodifiable(_recordesTempoPorNivel);
+
+  Future<void> carregarRecordesLocais() async {
+    if (_recordesTempoPorNivel.isEmpty) {
+      _recordesTempoPorNivel['bronze'] = 450; 
+      _recordesTempoPorNivel['prata'] = 520;  
+      notifyListeners();
+    }
+  }
 
   // ---------------------------------------------------
   // GETTERS DE COMPATIBILIDADE E UI
@@ -54,39 +76,61 @@ class GameState extends ChangeNotifier {
   // LÓGICA DO MODO DISPUTA (RECORDES E VELOCIDADE)
   // ---------------------------------------------------
 
-  /// Recupera o melhor tempo registrado de um nível específico.
-  /// Retorna `null` caso o jogador ainda não tenha completado este nível na disputa.
   int? obterRecordeDesteNivel(Nivel nivel) => _recordesTempoPorNivel[nivel.name];
 
-  /// Calcula a soma de todos os melhores tempos do jogador (Pontuação do Ranking Final).
   int get tempoTotalDisputaCombinado => _recordesTempoPorNivel.values.fold(0, (total, t) => total + t);
 
-  /// Verifica se o tempo feito pelo jogador é menor que o recorde anterior dele.
-  /// Se for menor, atualiza localmente e retorna [true] para sinalizar o recorde na UI.
-  bool verificarESalvarRecordeDesteNivel(Nivel nivel, int segundosGasto) {
-    final int? tempoAntigo = _recordesTempoPorNivel[nivel.name];
+  void acumularTempoDaFase(int segundosDaFase) {
+    _tempoAcumuladoDoNivelAtual += segundosDaFase;
+  }
 
-    if (tempoAntigo == null || segundosGasto < tempoAntigo) {
-      _recordesTempoPorNivel[nivel.name] = segundosGasto;
+  bool verificarESalvarRecordeDoNivelCompleto(Nivel nivel) {
+    final int? tempoAntigo = _recordesTempoPorNivel[nivel.name];
+    final int tempoFinalDoNivel = _tempoAcumuladoDoNivelAtual;
+
+    if (tempoAntigo == null || tempoFinalDoNivel < tempoAntigo) {
+      _recordesTempoPorNivel[nivel.name] = tempoFinalDoNivel;
       notifyListeners();
-      return true; // Bateu o próprio recorde!
+      return true; 
     }
-    return false; // Fez o percurso, mas foi mais lento que seu melhor tempo
+    return false; 
   }
 
   // ---------------------------------------------------
-  // MÉTODOS DE LÓGICA DE JOGO (MODIFICADOS)
+  // CONVERSOR AUXILIAR DE TEXTO FALADO PARA NÚMERO
+  // ---------------------------------------------------
+  /// Converte palavras faladas em formato textual para strings numéricas correspondentes.
+  String normalizarRespostaFalada(String texto) {
+    String limpo = texto.trim().toLowerCase();
+    
+    // Mapa básico de suporte a números falados por extenso para acessibilidade
+    final dicionarioNumeros = {
+      'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
+      'quatro': '4', 'cinco': '5', 'seis': '6', 'meia': '6', 'sete': '7',
+      'oito': '8', 'nove': '9', 'dez': '10', 'onze': '11', 'doze': '12',
+      'treze': '13', 'quatorze': '14', 'quinze': '15', 'dezesseis': '16',
+      'dezessete': '17', 'dezoito': '18', 'dezenove': '19', 'vinte': '20',
+      'trinta': '30', 'quarenta': '40', 'cinquenta': '50', 'sessenta': '60',
+      'setenta': '70', 'oitenta': '80', 'noventa': '90', 'cem': '100'
+    };
+
+    if (dicionarioNumeros.containsKey(limpo)) {
+      return dicionarioNumeros[limpo]!;
+    }
+    return limpo; // Se já veio como número "20", retorna "20"
+  }
+
+  // ---------------------------------------------------
+  // MÉTODOS DE LÓGICA DE JOGO
   // ---------------------------------------------------
 
   void registrarAcerto({int tempoRestante = 0}) {
     acertosNaFase++;
-    
     final int pontosGanhos = _calcularPontuacao.executar(
       acertos: 1,
       dificuldade: diculdadeTecnica,
       tempoRestante: tempoRestante,
     );
-    
     xpTotal += pontosGanhos;
     notifyListeners(); 
   }
@@ -112,12 +156,19 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void recomecarNivelAtual() {
+    faseAtual = 1;
+    _tempoAcumuladoDoNivelAtual = 0;
+    resetFase();
+  }
+
   void concluirEAvancarFase() {
     if (faseAtual < maxFasesPorNivel) {
       faseAtual++;
     } else {
       _subirNivel();
       faseAtual = 1;
+      _tempoAcumuladoDoNivelAtual = 0; 
     }
     resetFase();
   }
@@ -140,11 +191,12 @@ class GameState extends ChangeNotifier {
     errosNaFase = 0;
     vidas = 3;
     nivelAtual = Nivel.bronze;
+    _tempoAcumuladoDoNivelAtual = 0;
     notifyListeners();
   }
 
   // ---------------------------------------------------
-  // PERSISTÊNCIA (INTEGRADO COM FIRESTORE)
+  // PERSISTÊNCIA
   // ---------------------------------------------------
   
   Map<String, dynamic> toMap() {
@@ -153,7 +205,7 @@ class GameState extends ChangeNotifier {
       'xp_total': xpTotal,
       'nivel_atual': nivelAtual.name,
       'perfil_usuario': perfil,
-      'recordes_disputa': _recordesTempoPorNivel, // Mapeia os recordes para salvar em nuvem
+      'recordes_disputa': _recordesTempoPorNivel, 
       'ultima_atualizacao': DateTime.now().toIso8601String(),
     };
   }
@@ -168,7 +220,6 @@ class GameState extends ChangeNotifier {
       orElse: () => Nivel.bronze
     );
 
-    // Recupera os tempos salvos do banco convertendo de dynamic de forma segura
     if (map['recordes_disputa'] != null) {
       _recordesTempoPorNivel.clear();
       (map['recordes_disputa'] as Map<String, dynamic>).forEach((key, value) {
