@@ -55,12 +55,10 @@ class _RankingScreenState extends State<RankingScreen> {
             child: Center(
               child: SingleChildScrollView( 
                 child: Padding(
-                  // CORREÇÃO DO TOPO: Aumentamos o recuo superior para 240. 
-                  // Isso empurra o painel para baixo, tirando-o de cima do letreiro "Matemática Divertida"!
                   padding: const EdgeInsets.only(top: 240, bottom: 40, left: 24, right: 24),
                   child: Container(
                     constraints: const BoxConstraints(
-                      maxWidth: 500, // Mantém a largura compacta ideal
+                      maxWidth: 500, 
                     ),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -76,9 +74,8 @@ class _RankingScreenState extends State<RankingScreen> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min, // O container se molda e cresce para baixo dinamicamente
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Título interno
                         Text(
                           "RANKING GLOBAL • MODO DISPUTA",
                           textAlign: TextAlign.center,
@@ -103,8 +100,8 @@ class _RankingScreenState extends State<RankingScreen> {
                             : ListView.builder(
                                 itemCount: listaRanking.length,
                                 padding: const EdgeInsets.symmetric(vertical: 4),
-                                shrinkWrap: true, // Gasta apenas a altura real das linhas
-                                physics: const NeverScrollableScrollPhysics(), // Evita conflitos de rolagem
+                                shrinkWrap: true, 
+                                physics: const NeverScrollableScrollPhysics(),
                                 itemBuilder: (context, index) {
                                   final item = listaRanking[index];
                                   return _buildCardRanking(index + 1, item.key, item.value, gameState);
@@ -177,6 +174,15 @@ class _RankingScreenState extends State<RankingScreen> {
     final String dataRecorde = state.obterDataDoRecorde(nivelName);
     final String nomeJogador = state.perfil.toUpperCase();
 
+    // Lógica das Medalhas Dinâmicas
+    final String tipoMedalha = state.obterTipoMedalha(tempoSegundos);
+    Color corMedalha = Colors.brown; // Cor padrão bronze
+    if (tipoMedalha == "ouro") {
+      corMedalha = Colors.amber;
+    } else if (tipoMedalha == "prata") {
+      corMedalha = Colors.blueGrey.shade300;
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 5), 
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -184,31 +190,23 @@ class _RankingScreenState extends State<RankingScreen> {
         color: Colors.blue.shade50.withOpacity(0.6), 
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: posicao == 1 ? Colors.amber.shade400 : Colors.blue.shade200.withOpacity(0.4),
+          color: corMedalha.withOpacity(0.6),
           width: 1.5,
         ),
       ),
       child: Row(
         children: [
-          // Medalha / Círculo de Posição
+          // Medalha Dinâmica
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: posicao == 1 ? Colors.amber.shade100 : Colors.blue.shade100,
+              color: corMedalha.withOpacity(0.2),
               shape: BoxShape.circle,
+              border: Border.all(color: corMedalha, width: 2),
             ),
             alignment: Alignment.center,
-            child: posicao == 1
-                ? const Icon(Icons.workspace_premium, color: Colors.amber, size: 18)
-                : Text(
-                    "$posicaoº",
-                    style: TextStyle(
-                      color: Colors.blueGrey.shade800,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
+            child: Icon(Icons.emoji_events, color: corMedalha, size: 20),
           ),
           const SizedBox(width: 12),
 

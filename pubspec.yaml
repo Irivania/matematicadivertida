@@ -24,7 +24,7 @@ dependencies:
   speech_to_text: ^6.6.0
 
   # 💾 Persistência local
-  shared_preferences: ^2.2.3
+  shared_preferences: ^2.5.5
 
   # 🔥 Firebase
   firebase_core: ^2.32.0

@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Importação essencial para a trava Web vs Mobile
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 
 // Camadas de Dados e Domínio
@@ -40,7 +40,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
 
   // Gerenciamento de Estado Local
   Pergunta? _perguntaAtual;
-  String _ultimaPerguntaProcessada = ""; // Bloqueio total contra loops de render do Chrome
+  String _ultimaPerguntaProcessada = ""; 
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
   final _geralFocusNode = FocusNode();
@@ -76,7 +76,16 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused && _jogoAtivo) _pausarJogo();
   }
 
-  // --- Lógica de Fluxo do Jogo ---
+  // --- Lógica de Acessibilidade (TTS) ---
+  void _iniciarLeituraPergunta(Pergunta p) {
+    final controller = context.read<JogoController>();
+    controller.pararMicrofone();
+    controller.falar(p.pergunta).then((_) {
+      if (!kIsWeb && mounted && _jogoAtivo && context.read<GameState>().acessibilidadeVoz) {
+        Future.delayed(const Duration(milliseconds: 1200), _acionarMicrofone);
+      }
+    });
+  }
 
   void _acionarMicrofone() {
     if (!mounted || !_jogoAtivo) return;
@@ -91,12 +100,11 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
+  // --- Lógica de Fluxo do Jogo ---
+
   void _iniciarDesafio() {
     if (!mounted) return;
-    
     final gameState = context.read<GameState>();
-    
-    // Se for a primeira fase da disputa, limpa o cronômetro acumulado global do GameState
     if (gameState.fase == 1 && _disputaAtivaNaTela) {
       gameState.resetTempoAcumulado(); 
     }
@@ -151,7 +159,6 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
         fase: gameState.fase, 
       );
 
-      // Se a pergunta gerada for estritamente igual à que já está rodando, ignora para quebrar o loop
       if (pregunta.pergunta == _ultimaPerguntaProcessada) return;
 
       setState(() {
@@ -161,18 +168,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       });
 
       if (gameState.acessibilidadeVoz) {
-        final controller = context.read<JogoController>();
-        
-        // Garante o microfone fechado enquanto o sistema dita a pergunta
-        controller.pararMicrofone(); 
-        
-        controller.falar(pregunta.pergunta).then((_) {
-          if (!kIsWeb) {
-            Future.delayed(const Duration(milliseconds: 1200), () {
-              if (mounted && _jogoAtivo && gameState.acessibilidadeVoz) _acionarMicrofone();
-            });
-          }
-        });
+        _iniciarLeituraPergunta(pregunta);
       }
       _garantirFoco();
     } catch (_) {}
@@ -211,19 +207,18 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     setState(() => _jogoAtivo = false);
     final gameState = context.read<GameState>();
 
-    String erroMensagemVoz = _disputaAtivaNaTela
-        ? "Erro Fatal! O desafio foi resetado!"
-        : "Que pena, você errou! A resposta correta era $correta";
-
     if (gameState.acessibilidadeVoz) {
-      context.read<JogoController>().falarFeedbackSistema(erroMensagemVoz);
+      context.read<JogoController>().falarFeedbackSistema(
+          _disputaAtivaNaTela ? "Erro Fatal! A resposta era $correta" : "Você errou! A resposta era $correta"
+      );
     }
 
     _exibirDialogo(
       _encapsularComTecladoDialog(
         ErrorDialog(
+          // CORREÇÃO: Exibição da resposta correta inclusa
           mensagem: _disputaAtivaNaTela
-              ? "🎯 Erro Fatal! No Modo Disputa você não pode errar. O desafio foi resetado para a Fase 1 deste Rank!"
+              ? "🎯 Erro Fatal! No Modo Disputa você não pode errar. A resposta correta era: $correta. O desafio foi resetado!"
               : "🎮 A resposta correta era: $correta",
           onRetry: () {
             Navigator.pop(context);
@@ -271,7 +266,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _concluirFase() {
+  Future<void> _concluirFase() async {
     _cancelarTimer();
     context.read<JogoController>().pararMicrofone();
     setState(() => _jogoAtivo = false);
@@ -281,7 +276,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
     bool nivelConcluido = gameState.fase == gameState.maxFasesPorNivel;
 
     if (_disputaAtivaNaTela && nivelConcluido) {
-      foiRecorde = gameState.verificarESalvarRecordeDoNivelCompleto(gameState.nivelAtual.name);
+      foiRecorde = await gameState.verificarESalvarRecordeDoNivelCompleto(gameState.nivelAtual.name);
     }
 
     if (gameState.acessibilidadeVoz) {
@@ -290,7 +285,8 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       );
     }
 
-    int recordeSalvo = gameState.obterRecordeDoSharedPreferences(gameState.nivelAtual.name);
+    // Leitura direta do mapa no GameState
+    int recordeSalvo = gameState.recordesPorNivel[gameState.nivelAtual.name.toLowerCase()] ?? 0;
 
     _exibirDialogo(
       _encapsularComTecladoDialog(
@@ -302,7 +298,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
           tempoAtualSegundos: gameState.tempoAcumuladoNivel,
           recordeHistoricoSegundos: recordeSalvo,
           foiRecorde: foiRecorde,
-          textoBotaoAvancar: nivelConcluido ? "VOLTAR AO MENU" : "PRÓXIMA FASE",
+          textoBotaoAvancar: nivelConcluido ? "PRÓXIMO NÍVEL" : "PRÓXIMA FASE",
           onRecomecar: () {
             Navigator.pop(context);
             gameState.recomecarNivelAtual();
@@ -310,22 +306,14 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
           },
           onAvancar: () {
             Navigator.pop(context);
-            if (nivelConcluido) {
-              Navigator.pop(context); 
-            } else {
-              gameState.concluirEAvancarFase();
-              _iniciarDesafio();
-            }
+            gameState.concluirEAvancarFase();
+            _iniciarDesafio();
           },
         ),
         onEnterPressed: () {
           Navigator.pop(context);
-          if (nivelConcluido) {
-            Navigator.pop(context);
-          } else {
-            gameState.concluirEAvancarFase();
-            _iniciarDesafio();
-          }
+          gameState.concluirEAvancarFase();
+          _iniciarDesafio();
         },
       ),
     );
@@ -422,17 +410,12 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // COLUNA DO RANK BLINDADA: Renderiza o IconData e a Cor nativa do Enum de forma nativa e profissional
           Column(
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    state.nivelAtual.icone, 
-                    color: state.nivelAtual.cor, 
-                    size: 18,
-                  ),
+                  Icon(state.nivelAtual.icone, color: state.nivelAtual.cor, size: 18),
                   const SizedBox(width: 5),
                   Text(
                     state.nomeNivelExibicao.toUpperCase(), 
@@ -444,13 +427,9 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              Text(
-                "RANK", 
-                style: TextStyle(fontSize: 10, color: _disputaAtivaNaTela ? Colors.white60 : Colors.grey)
-              ),
+              Text("RANK", style: TextStyle(fontSize: 10, color: _disputaAtivaNaTela ? Colors.white60 : Colors.grey)),
             ],
           ),
-          
           _statusColumn("${state.fase}/10", "FASE"),
           _statusColumn("${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}", "PERGUNTA"),
           if (_disputaAtivaNaTela)
@@ -537,8 +516,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
                   FocusScope.of(context).unfocus();
                   Future.microtask(() { if (context.mounted) Navigator.of(context).pop(); });
                 },
-                borderRadius: BorderRadius.circular(30),
-                child: Ink(
+                child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.75), 
@@ -556,7 +534,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Botão Modo de Voz
+            // Botão Modo de Voz (Acessibilidade)
             Positioned(
               top: MediaQuery.of(context).padding.top + 15,
               right: 15,
@@ -576,13 +554,7 @@ class _JogoScreenState extends State<JogoScreen> with WidgetsBindingObserver {
                     context.read<JogoController>().resetarTrava();
                     _ultimaPerguntaProcessada = ""; 
                     if (_jogoAtivo && _perguntaAtual != null) {
-                      context.read<JogoController>().falar(_perguntaAtual!.pergunta).then((_) {
-                        if (!kIsWeb) {
-                          Future.delayed(const Duration(milliseconds: 1200), () {
-                            if (mounted && _jogoAtivo && gameState.acessibilidadeVoz) _acionarMicrofone();
-                          });
-                        }
-                      });
+                      _iniciarLeituraPergunta(_perguntaAtual!);
                     }
                   } else {
                     context.read<JogoController>().pararMicrofone();
