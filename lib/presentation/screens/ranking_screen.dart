@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/game_state.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/enums/nivel_enum.dart'; // Importa seu enum para mapear ícones e labels
+import '../../../core/enums/nivel_enum.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -17,7 +17,6 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    // Força o carregamento dos dados de teste/locais ao abrir a tela
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GameState>().carregarRecordesLocais();
     });
@@ -25,85 +24,101 @@ class _RankingScreenState extends State<RankingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuta o GameState reativamente
     final gameState = context.watch<GameState>();
     final recordes = gameState.recordesPorNivel;
 
-    // Transforma o mapa de recordes em uma lista ordenada pelo menor tempo (mais rápido)
+    // Transforma o mapa em lista e ordena pelo menor tempo
     final listaRanking = recordes.entries.toList();
     listaRanking.sort((a, b) => a.value.compareTo(b.value));
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundEscuro,
       body: Stack(
         children: [
-          // Fundo Estilizado com Neon Roxo/Disputa
+          // Imagem de fundo ajustada para não cortar o topo
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/imagem_fundo_ranking.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter, 
+            ),
+          ),
+
+          // Camada de iluminação suave
           Positioned.fill(
             child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.backgroundEscuro,
-                    Colors.purple.withOpacity(0.12),
-                    AppColors.backgroundEscuro,
-                  ],
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+
+          // Posicionamento e centralização do Painel do Ranking
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView( 
+                child: Padding(
+                  // CORREÇÃO DO TOPO: Aumentamos o recuo superior para 240. 
+                  // Isso empurra o painel para baixo, tirando-o de cima do letreiro "Matemática Divertida"!
+                  padding: const EdgeInsets.only(top: 240, bottom: 40, left: 24, right: 24),
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      maxWidth: 500, // Mantém a largura compacta ideal
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85), 
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // O container se molda e cresce para baixo dinamicamente
+                      children: [
+                        // Título interno
+                        Text(
+                          "RANKING GLOBAL • MODO DISPUTA",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.blueGrey.shade900,
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Menores Tempos por Ranking Global",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 12),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Lista de Recordes
+                        listaRanking.isEmpty
+                            ? _buildNenhumDado()
+                            : ListView.builder(
+                                itemCount: listaRanking.length,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                shrinkWrap: true, // Gasta apenas a altura real das linhas
+                                physics: const NeverScrollableScrollPhysics(), // Evita conflitos de rolagem
+                                itemBuilder: (context, index) {
+                                  final item = listaRanking[index];
+                                  return _buildCardRanking(index + 1, item.key, item.value, gameState);
+                                },
+                              ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
 
-          SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 80),
-                
-                // Cabeçalho Principal
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.emoji_events, color: Colors.amber, size: 36),
-                    const SizedBox(width: 10),
-                    Text(
-                      "RANKING GLOBAL",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        shadows: [
-                          Shadow(color: Colors.purple.withOpacity(0.8), blurRadius: 10)
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Modo Disputa • Menores Tempos por Rank",
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-                ),
-                const SizedBox(height: 25),
-
-                // Conteúdo Condicional (Lista ou Mensagem Vazia)
-                Expanded(
-                  child: listaRanking.isEmpty
-                      ? _buildNenhumDado()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: listaRanking.length,
-                          itemBuilder: (context, index) {
-                            final item = listaRanking[index];
-                            return _buildCardRanking(index + 1, item.key, item.value);
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-
-          // Botão Voltar superior esquerdo padrão
+          // Botão Sair limpo no topo esquerdo
           Positioned(
             top: MediaQuery.of(context).padding.top + 15,
             left: 15,
@@ -111,23 +126,20 @@ class _RankingScreenState extends State<RankingScreen> {
               onTap: () => Navigator.of(context).pop(),
               borderRadius: BorderRadius.circular(30),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: AppColors.neonCiano, width: 2),
-                  boxShadow: [
-                    BoxShadow(color: AppColors.neonCiano.withOpacity(0.3), blurRadius: 8)
-                  ],
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 13),
+                    Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 14),
                     SizedBox(width: 6),
                     Text(
-                      "VOLTAR", 
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)
+                      "SAIR", 
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)
                     ),
                   ],
                 ),
@@ -141,114 +153,114 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Widget _buildNenhumDado() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.bar_chart_rounded, size: 70, color: Colors.white.withOpacity(0.15)),
-            const SizedBox(height: 15),
-            const Text(
-              "NENHUM DADO ENCONTRADO",
-              style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Complete uma fase no Modo Disputa na tela de jogo para registrar seu primeiro recorde de velocidade!",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13, height: 1.4),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.bar_chart_rounded, size: 45, color: Colors.blueGrey.withOpacity(0.4)),
+          const SizedBox(height: 10),
+          const Text(
+            "NENHUM REGISTRO",
+            style: TextStyle(color: Colors.blueGrey, fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCardRanking(int posicao, String nivelName, int tempoSegundos) {
-    // Tenta encontrar o Enum correspondente à string para extrair o ícone e a label corretas
+  Widget _buildCardRanking(int posicao, String nivelName, int tempoSegundos, GameState state) {
     Nivel? nivelEnum;
     try {
-      nivelEnum = Nivel.values.firstWhere((e) => e.name == nivelName);
+      nivelEnum = Nivel.values.firstWhere((e) => e.name == nivelName.toLowerCase().trim());
     } catch (_) {}
 
-    // CORREÇÃO DOS TIPOS: Forçado o cast/conversão para String usando .toString() para evitar o erro de compilação
-    final String labelExibicao = nivelEnum != null ? nivelEnum.label.toString() : nivelName.toUpperCase();
-    final String iconeExibicao = nivelEnum != null ? nivelEnum.icone.toString() : "🎯";
-
-    // Define cores estilizadas para o pódio (1º, 2º e 3º lugar)
-    Color corTrofeu = Colors.transparent;
-    if (posicao == 1) corTrofeu = Colors.amber;
-    if (posicao == 2) corTrofeu = const Color(0xFFC0C0C0); // Prata
-    if (posicao == 3) corTrofeu = const Color(0xCD7F323A); // Bronze
+    final String labelExibicao = nivelEnum != null ? nivelEnum.label : nivelName.toUpperCase();
+    final String dataRecorde = state.obterDataDoRecorde(nivelName);
+    final String nomeJogador = state.perfil.toUpperCase();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 7),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 5), 
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(15),
+        color: Colors.blue.shade50.withOpacity(0.6), 
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: posicao == 1 ? Colors.amber.withOpacity(0.4) : Colors.purpleAccent.withOpacity(0.2),
+          color: posicao == 1 ? Colors.amber.shade400 : Colors.blue.shade200.withOpacity(0.4),
           width: 1.5,
         ),
       ),
       child: Row(
         children: [
-          // Indicador de Posição / Medalha
+          // Medalha / Círculo de Posição
           Container(
-            width: 38,
-            height: 38,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: corTrofeu != Colors.transparent ? corTrofeu.withOpacity(0.15) : Colors.white10,
+              color: posicao == 1 ? Colors.amber.shade100 : Colors.blue.shade100,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: corTrofeu != Colors.transparent && posicao == 1
-                ? Icon(Icons.workspace_premium, color: corTrofeu, size: 22)
+            child: posicao == 1
+                ? const Icon(Icons.workspace_premium, color: Colors.amber, size: 18)
                 : Text(
                     "$posicaoº",
                     style: TextStyle(
-                      color: corTrofeu != Colors.transparent ? corTrofeu : Colors.white60,
+                      color: Colors.blueGrey.shade800,
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
 
-          // Informações do Nível atingido
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "$iconeExibicao Rank $labelExibicao",
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                "Recorde Pessoal",
-                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
-              ),
-            ],
+          // Nome do Jogador, Ícone e Subtítulo
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (nivelEnum != null) ...[
+                      Icon(nivelEnum.icone, color: nivelEnum.cor, size: 16),
+                      const SizedBox(width: 5),
+                    ],
+                    Expanded(
+                      child: Text(
+                        "[$nomeJogador] Rank $labelExibicao",
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.blueGrey.shade900, 
+                          fontSize: 14, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Recorde batido em: $dataRecorde", 
+                  style: TextStyle(color: Colors.blueGrey.shade500, fontSize: 10),
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
 
-          // Tempo Registrado
+          // Bloco do Cronômetro / Tempo
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.purpleAccent.withOpacity(0.4), width: 1),
+              color: Colors.blueGrey.shade900,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.timer_sharp, color: Colors.purpleAccent, size: 14),
+                const Icon(Icons.timer, color: Colors.white, size: 12),
                 const SizedBox(width: 4),
                 Text(
-                  "${tempoSegundos}s",
-                  style: const TextStyle(color: Colors.purpleAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                  state.formatarMinutos(tempoSegundos), 
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
