@@ -4,13 +4,9 @@ import '../../domain/usecases/calcular_pontuacao_usecase.dart';
 import '../../core/enums/nivel_enum.dart';
 import '../../core/config/estrutura_pedagogica.dart';
 
-/// Gerencia o estado reativo do progresso do jogador durante uma sessão.
 class GameState extends ChangeNotifier {
   final _calcularPontuacao = CalcularPontuacaoUseCase();
 
-  // ---------------------------------------------------
-  // ESTADO DO JOGO (TREINO / BASE)
-  // ---------------------------------------------------
   int faseAtual = 1;
   int perguntaAtual = 1; 
   int xpTotal = 0; 
@@ -18,11 +14,8 @@ class GameState extends ChangeNotifier {
   int errosNaFase = 0;
   int vidas = 3; 
   Nivel nivelAtual = Nivel.bronze;
-  String perfil = "crianca";
+  String perfil = "crianca"; 
 
-  // ---------------------------------------------------
-  // ESTADO DE ACESSIBILIDADE
-  // ---------------------------------------------------
   bool acessibilidadeVoz = false;
 
   void alternarAcessibilidadeVoz() {
@@ -30,28 +23,47 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------------------------------------------------
-  // ESTADO DO MODO DISPUTA (Com Persistência Real)
-  // ---------------------------------------------------
+  // --- MÉTODOS DE RESET E AVANÇO ---
+  
+  // MÉTODO ADICIONADO PARA CORREÇÃO DO FLUXO DE ERRO
+  void resetarFaseAtual() {
+    perguntaAtual = 1; 
+    acertosNaFase = 0;
+    errosNaFase = 0;
+    vidas = 3;
+    notifyListeners(); 
+  }
+
+  // Mapas para armazenar o estado atual da sessão
   final Map<String, int> _recordesTempoPorNivel = {};
   final Map<String, String> _datasRecordesPorNivel = {};
+  final Map<String, String> _nomesRecordesPorNivel = {}; 
   int _tempoAcumuladoDoNivelAtual = 0;
 
   Map<String, int> get recordesPorNivel => Map.unmodifiable(_recordesTempoPorNivel);
   Map<String, String> get datasRecordesPorNivel => Map.unmodifiable(_datasRecordesPorNivel);
+  Map<String, String> get nomesRecordesPorNivel => Map.unmodifiable(_nomesRecordesPorNivel);
 
   Future<void> carregarRecordesLocais() async {
     final prefs = await SharedPreferences.getInstance();
     final niveis = ['bronze', 'prata', 'ouro', 'platina', 'mestre'];
     
+    _recordesTempoPorNivel.clear();
+    _datasRecordesPorNivel.clear();
+    _nomesRecordesPorNivel.clear();
+    
     bool houveMudanca = false;
     for (var nivel in niveis) {
-      int? tempoSalvo = prefs.getInt("recorde_tempo_$nivel");
-      String? dataSalva = prefs.getString("recorde_data_$nivel");
+      String chaveNivelPerfil = "${nivel}_${perfil.toLowerCase()}";
+      
+      int? tempoSalvo = prefs.getInt("recorde_tempo_$chaveNivelPerfil");
+      String? dataSalva = prefs.getString("recorde_data_$chaveNivelPerfil");
+      String? nomeSalvo = prefs.getString("recorde_nome_$chaveNivelPerfil");
       
       if (tempoSalvo != null && tempoSalvo > 0) {
         _recordesTempoPorNivel[nivel] = tempoSalvo;
-        _datasRecordesPorNivel[nivel] = dataSalva ?? "";
+        _datasRecordesPorNivel[nivel] = dataSalva ?? "--/--/----";
+        _nomesRecordesPorNivel[nivel] = nomeSalvo ?? "JOGADOR";
         houveMudanca = true;
       }
     }
@@ -60,18 +72,23 @@ class GameState extends ChangeNotifier {
 
   Future<bool> verificarESalvarRecordeDoNivelCompleto(String nomeNivel) async {
     final prefs = await SharedPreferences.getInstance();
-    final String chave = nomeNivel.toLowerCase();
-    final int? tempoAntigo = _recordesTempoPorNivel[chave];
+    final String chaveNivel = nomeNivel.toLowerCase();
+    final String chaveArmazenamento = "${chaveNivel}_${perfil.toLowerCase()}";
+    
+    final int? tempoAntigo = _recordesTempoPorNivel[chaveNivel];
     final int tempoFinalDoNivel = _tempoAcumuladoDoNivelAtual;
 
     if (tempoAntigo == null || tempoAntigo == 0 || tempoFinalDoNivel < tempoAntigo) {
-      _recordesTempoPorNivel[chave] = tempoFinalDoNivel;
+      _recordesTempoPorNivel[chaveNivel] = tempoFinalDoNivel;
+      _nomesRecordesPorNivel[chaveNivel] = perfil;
+      
       final DateTime agora = DateTime.now();
       String dataFormatada = "${agora.day.toString().padLeft(2, '0')}/${agora.month.toString().padLeft(2, '0')}/${agora.year}";
-      _datasRecordesPorNivel[chave] = dataFormatada;
+      _datasRecordesPorNivel[chaveNivel] = dataFormatada;
 
-      await prefs.setInt("recorde_tempo_$chave", tempoFinalDoNivel);
-      await prefs.setString("recorde_data_$chave", dataFormatada);
+      await prefs.setInt("recorde_tempo_$chaveArmazenamento", tempoFinalDoNivel);
+      await prefs.setString("recorde_data_$chaveArmazenamento", dataFormatada);
+      await prefs.setString("recorde_nome_$chaveArmazenamento", perfil);
       
       notifyListeners();
       return true; 
@@ -79,18 +96,13 @@ class GameState extends ChangeNotifier {
     return false; 
   }
 
-  // ---------------------------------------------------
-  // LÓGICA DE GAMIFICAÇÃO (MEDALHAS)
-  // ---------------------------------------------------
+  // --- LÓGICA DE JOGO E GETTERS ---
   String obterTipoMedalha(int segundos) {
-    if (segundos <= 300) return "ouro";   // Até 5 min
-    if (segundos <= 600) return "prata";  // Até 10 min
-    return "bronze";                      // Acima de 10 min
+    if (segundos <= 300) return "ouro";
+    if (segundos <= 600) return "prata";
+    return "bronze";
   }
 
-  // ---------------------------------------------------
-  // GETTERS DE COMPATIBILIDADE E UI
-  // ---------------------------------------------------
   int get acertos => acertosNaFase;
   String get nivelParaService => nivelAtual.name;
   int get indicePerguntaAtual => perguntaAtual;
@@ -109,9 +121,6 @@ class GameState extends ChangeNotifier {
     return Dificuldade.dificil;
   }
 
-  // ---------------------------------------------------
-  // LÓGICA DO MODO DISPUTA
-  // ---------------------------------------------------
   void incrementarTempoGeral() { _tempoAcumuladoDoNivelAtual++; notifyListeners(); }
   void resetTempoAcumulado() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
 
@@ -129,9 +138,6 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------------------------------------------------
-  // CONVERSOR AUXILIAR DE TEXTO
-  // ---------------------------------------------------
   String normalizarRespostaFalada(String texto) {
     String limpo = texto.trim().toLowerCase();
     final dicionarioNumeros = {
@@ -145,9 +151,6 @@ class GameState extends ChangeNotifier {
     return dicionarioNumeros.containsKey(limpo) ? dicionarioNumeros[limpo]! : limpo;
   }
 
-  // ---------------------------------------------------
-  // MÉTODOS DE LÓGICA DE JOGO
-  // ---------------------------------------------------
   void registrarAcerto({int tempoRestante = 0}) {
     acertosNaFase++;
     xpTotal += _calcularPontuacao.executar(acertos: 1, dificuldade: diculdadeTecnica, tempoRestante: tempoRestante);
@@ -184,30 +187,28 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------------------------------------------------
-  // PERSISTÊNCIA ESTRUTURAL
-  // ---------------------------------------------------
   Map<String, dynamic> toMap() {
     return {
       'fase_atual': faseAtual, 'xp_total': xpTotal, 'nivel_atual': nivelAtual.name,
       'perfil_usuario': perfil, 'recordes_disputa': _recordesTempoPorNivel, 
-      'datas_recordes': _datasRecordesPorNivel, 'ultima_atualizacao': DateTime.now().toIso8601String(),
+      'datas_recordes': _datasRecordesPorNivel, 'nomes_recordes': _nomesRecordesPorNivel,
+      'ultima_atualizacao': DateTime.now().toIso8601String(),
     };
   }
 
   void fromMap(Map<String, dynamic> map) {
     faseAtual = map['fase_atual'] ?? 1;
     xpTotal = map['xp_total'] ?? 0;
-    perfil = map['perfil_usuario'] ?? "crianca";
+    perfil = map['perfil_usuario'] ?? "JOGADOR";
     nivelAtual = Nivel.values.firstWhere((e) => e.name == map['nivel_atual'], orElse: () => Nivel.bronze);
     
     if (map['recordes_disputa'] != null) {
       _recordesTempoPorNivel.clear();
       (map['recordes_disputa'] as Map<String, dynamic>).forEach((key, value) => _recordesTempoPorNivel[key] = value as int);
     }
-    if (map['datas_recordes'] != null) {
-      _datasRecordesPorNivel.clear();
-      (map['datas_recordes'] as Map<String, dynamic>).forEach((key, value) => _datasRecordesPorNivel[key] = value as String);
+    if (map['nomes_recordes'] != null) {
+      _nomesRecordesPorNivel.clear();
+      (map['nomes_recordes'] as Map<String, dynamic>).forEach((key, value) => _nomesRecordesPorNivel[key] = value as String);
     }
     notifyListeners();
   }

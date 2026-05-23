@@ -1,31 +1,29 @@
 // lib/main.dart
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; 
+import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 // Configuração do Firebase
-import 'package:matematicadivertida/core/config/firebase_options.dart'; 
+import 'package:matematicadivertida/core/config/firebase_options.dart';
 
-// Camada de Domain
+// Camadas de Domain e Data
 import 'package:matematicadivertida/domain/repositories/i_auth_repository.dart';
-
-// Camada de Data
 import 'package:matematicadivertida/data/services/auth_service.dart';
 import 'package:matematicadivertida/data/repositories/auth_repository_impl.dart';
-import 'package:matematicadivertida/data/services/audio_voice_service.dart';
-import 'package:matematicadivertida/data/models/game_state.dart'; 
+import 'package:matematicadivertida/data/models/game_state.dart';
 
-// Camada de Presentation
+// Camadas de Presentation (Controllers)
 import 'package:matematicadivertida/presentation/controllers/auth_controller.dart';
-import 'package:matematicadivertida/presentation/controllers/jogo_controller.dart'; 
+import 'package:matematicadivertida/presentation/controllers/jogo_controller.dart';
 import 'package:matematicadivertida/presentation/auth/login_screen.dart';
 import 'package:matematicadivertida/presentation/screens/home_screen.dart';
-import 'package:matematicadivertida/presentation/routes/app_routes.dart'; 
+import 'package:matematicadivertida/presentation/routes/app_routes.dart';
 
 void main() async {
+  // Garante que os bindings do Flutter estejam prontos
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Inicialização do Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -33,12 +31,10 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        // 1. Serviço Puro do Firebase Auth
-        Provider<AuthService>(
-          create: (_) => AuthService(),
-        ),
+        // 1. Serviço de Autenticação
+        Provider<AuthService>(create: (_) => AuthService()),
 
-        // 2. Repositório
+        // 2. Repositório de Auth
         ProxyProvider<AuthService, IAuthRepository>(
           update: (_, authService, __) => AuthRepositoryImpl(authService),
         ),
@@ -49,20 +45,11 @@ void main() async {
           update: (_, repository, controller) => controller ?? AuthController(repository),
         ),
 
-        // 4. Serviço de Voz Antigo (Mantido para compatibilidade se outras telas usarem)
-        ChangeNotifierProvider<AudioVoiceService>(
-          create: (_) => AudioVoiceService(),
-        ),
+        // 4. Estado Global do Jogo (Score, Nível, etc)
+        ChangeNotifierProvider<GameState>(create: (_) => GameState()),
 
-        // 5. Estado Global do Jogo
-        ChangeNotifierProvider<GameState>(
-          create: (_) => GameState(),
-        ),
-
-        // 6. Controlador Unificado do Jogo (Gerencia TTS e Microfone centralizados)
-        ChangeNotifierProvider<JogoController>(
-          create: (_) => JogoController(),
-        ),
+        // 5. Controlador Unificado de Áudio/Voz (Gerencia TTS e Microfone)
+        ChangeNotifierProvider<JogoController>(create: (_) => JogoController()),
       ],
       child: const MeuApp(),
     ),
@@ -79,12 +66,14 @@ class MeuApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212), // Fundo escuro padrão caso as telas falhem
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        primaryColor: Colors.cyan,
       ),
+      // Uso da navegação dinâmica que você já configurou
       onGenerateRoute: AppRoutes.onGenerateRoute,
       home: Consumer<AuthController>(
         builder: (context, authController, _) {
-          
+          // Exibe loader enquanto verifica o estado da sessão
           if (authController.isLoading && authController.usuarioAtual == null) {
             return const Scaffold(
               body: Center(
@@ -95,8 +84,9 @@ class MeuApp extends StatelessWidget {
             );
           }
 
+          // Rota inicial baseada no status de autenticação
           if (authController.estaAutenticado) {
-            return const HomeScreen(); 
+            return const HomeScreen();
           }
 
           return const LoginScreen();
