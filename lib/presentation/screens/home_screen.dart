@@ -1,12 +1,16 @@
 // lib/presentation/screens/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../../data/models/game_state.dart';
+import '../widgets/home/home_header.dart';
+import '../widgets/home/game_mode_button.dart';
+import '../widgets/home/mission_card.dart';
 import 'ranking_screen.dart';
+import 'loja_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,672 +19,172 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _nomeController =
-      TextEditingController();
-
-  bool _isEditing = false;
-  bool _inicializado = false;
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    if (!_inicializado) {
-      final authController =
-          Provider.of<AuthController>(
-        context,
-        listen: false,
-      );
-
-      String nomeSalvo = "";
-
-      try {
-        final dynamic usuario =
-            authController.usuarioAtual;
-
-        if (usuario != null) {
-          nomeSalvo =
-              usuario.nomeExibicao ??
-              usuario.nome ??
-              "";
-        }
-      } catch (_) {}
-
-      if (nomeSalvo.trim().isEmpty) {
-        nomeSalvo = authController.nomeJogador;
-      }
-
-      if (nomeSalvo.trim().isNotEmpty) {
-        _nomeController.text = nomeSalvo;
-      }
-
-      _inicializado = true;
-    }
+  void initState() {
+    super.initState();
+    // Inicialização da animação de entrada (Fade-in profissional)
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // =========================================
-          // FUNDO NÍTIDO
-          // =========================================
-          Positioned.fill(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/images/fundo_home.png',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  filterQuality: FilterQuality.high,
-                ),
-
-                // ESCURECIMENTO LEVE
-                Container(
-                  color: Colors.black.withOpacity(
-                    0.12,
-                  ),
-                ),
-              ],
+      body: FadeTransition(
+        opacity: _animation,
+        child: Stack(
+          children: [
+            // Fundo
+            Positioned.fill(
+              child: Image.asset('assets/images/fundo_home.png', 
+                  fit: BoxFit.cover, alignment: Alignment.topCenter),
             ),
-          ),
+            Container(color: Colors.black.withOpacity(0.12)),
+            _buildBackgroundGlow(),
 
-          _buildBackgroundGlow(),
-
-          // =========================================
-          // CONTEÚDO
-          // =========================================
-          SafeArea(
-            child: Center(
+            SafeArea(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(
-                    maxWidth: 700,
-                  ),
+                  constraints: const BoxConstraints(maxWidth: 700),
                   child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min,
-                    crossAxisAlignment:
-                        CrossAxisAlignment
-                            .center,
                     children: [
-                      // BAIXA O CONTEÚDO
-                      const SizedBox(
-                        height: 170,
+                      // Botões do Topo
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildExitButton(context),
+                          IconButton(
+                            icon: const Icon(Icons.shopping_bag, color: Colors.amber, size: 30),
+                            onPressed: () => Navigator.push(context, 
+                                MaterialPageRoute(builder: (_) => const LojaScreen())),
+                          ),
+                        ],
                       ),
 
-                      _buildHeaderContext(
-                        context,
-                      ),
+                      // Componentes Refatorados
+                      const HomeHeader(),
+                      const SizedBox(height: 20),
+                      const MissionCard(),
+                      const SizedBox(height: 26),
 
-                      const SizedBox(
-                        height: 26,
-                      ),
+                      const Text("ESCOLHA SEU MODO DE JOGO", 
+                          style: TextStyle(color: Colors.white, fontSize: 12, 
+                          fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      const SizedBox(height: 14),
 
-                      const Text(
-                        "ESCOLHA SEU MODO DE JOGO",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight:
-                              FontWeight.bold,
-                          letterSpacing:
-                              1.2,
-                        ),
+                      GameModeButton(
+                        titulo: "MODO TREINO",
+                        subtitulo: "Jogue sem pressão, sem perder vidas",
+                        cor: AppColors.neonCiano,
+                        onPressed: () => _navegarParaJogo(context, 'treino'),
                       ),
-
-                      const SizedBox(
-                        height: 14,
-                      ),
-
-                      _buildGameModeButton(
-                        context: context,
-                        titulo:
-                            "MODO TREINO",
-                        subtitulo:
-                            "Jogue sem pressão, sem perder vidas",
-                        cor: AppColors
-                            .neonCiano,
-                        modo: "treino",
-                      ),
-
-                      const SizedBox(
-                        height: 12,
-                      ),
-
-                      _buildGameModeButton(
-                        context: context,
-                        titulo:
-                            "MODO DISPUTA 🏆",
-                        subtitulo:
-                            "Corra contra o tempo e pontue no Ranking",
+                      const SizedBox(height: 12),
+                      
+                      GameModeButton(
+                        titulo: "MODO DISPUTA 🏆",
+                        subtitulo: "Corra contra o tempo (2x XP)",
                         cor: Colors.amber,
-                        modo: "disputa",
+                        onPressed: () => _navegarParaJogo(context, 'disputa'),
                       ),
-
-                      const SizedBox(
-                        height: 12,
-                      ),
-
-                      _buildRankingButton(
-                        context,
-                      ),
-
-                      const SizedBox(
-                        height: 18,
-                      ),
+                      const SizedBox(height: 12),
+                      _buildRankingButton(context),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-
-          _buildVersionFooter(),
-
-          // =========================================
-          // BOTÃO SAIR
-          // =========================================
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black
-                    .withOpacity(0.35),
-                borderRadius:
-                    BorderRadius.circular(
-                  14,
-                ),
-              ),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.exit_to_app,
-                  color: Colors.white,
-                  size: 30,
-                ),
-                tooltip: 'Sair do Jogo',
-                onPressed: () async {
-                  await Provider.of<
-                      AuthController>(
-                    context,
-                    listen: false,
-                  ).logout();
-
-                  Future.delayed(
-                    const Duration(
-                      milliseconds: 200,
-                    ),
-                    () {
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil(
-                        '/',
-                        (route) => false,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =========================================
-  // EFEITO DE LUZ
-  // =========================================
-  Widget _buildBackgroundGlow() {
-    return Positioned(
-      top: -120,
-      right: -120,
-      child: Container(
-        width: 320,
-        height: 320,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.neonCiano
-              .withValues(alpha: 0.12),
+          ],
         ),
       ),
     );
   }
 
-  // =========================================
-  // HEADER
-  // =========================================
-  Widget _buildHeaderContext(
-    BuildContext context,
-  ) {
-    final authController =
-        Provider.of<AuthController>(
-      context,
-    );
+  void _navegarParaJogo(BuildContext context, String modo) {
+    final gs = context.read<GameState>();
 
-    String nomeSalvo = "";
-
-    try {
-      final dynamic usuario =
-          authController.usuarioAtual;
-
-      if (usuario != null) {
-        nomeSalvo =
-            usuario.nomeExibicao ??
-            usuario.nome ??
-            "";
-      }
-    } catch (_) {}
-
-    if (nomeSalvo.trim().isEmpty) {
-      nomeSalvo = authController.nomeJogador;
-    }
-
-    if (nomeSalvo.trim().isEmpty ||
-        _isEditing) {
-      return Column(
-        children: [
-          const Icon(
-            Icons.account_circle,
-            size: 44,
-            color: AppColors.neonCiano,
-          ),
-
-          const SizedBox(height: 8),
-
-          const Text(
-            "BEM-VINDO(A)! 👋\nCOMO QUER SER CHAMADO(A)?",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller:
-                      _nomeController,
-                  style:
-                      const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                  ),
-                  decoration:
-                      InputDecoration(
-                    hintText:
-                        "Digite seu apelido...",
-                    hintStyle:
-                        const TextStyle(
-                      color:
-                          Colors.white38,
-                      fontSize: 12,
-                    ),
-                    filled: true,
-                    fillColor:
-                        Colors.black
-                            .withOpacity(
-                      0.25,
-                    ),
-                    border:
-                        OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        14,
-                      ),
-                      borderSide:
-                          BorderSide.none,
-                    ),
-                    focusedBorder:
-                        OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        14,
-                      ),
-                      borderSide:
-                          const BorderSide(
-                        color: AppColors
-                            .neonCiano,
-                      ),
-                    ),
-                    contentPadding:
-                        const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 14,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 8),
-
-              IconButton.filled(
-                style:
-                    IconButton.styleFrom(
-                  backgroundColor:
-                      AppColors
-                          .neonCiano,
-                  foregroundColor:
-                      AppColors
-                          .backgroundEscuro,
-                ),
-                onPressed: () async {
-                  final nomeDigitado =
-                      _nomeController.text
-                          .trim();
-
-                  if (nomeDigitado
-                      .isNotEmpty) {
-                    try {
-                      await authController
-                          .escolherPerfilParaJogar(
-                        nome:
-                            nomeDigitado,
-                        perfilEscolhido:
-                            "crianca",
-                      );
-                    } catch (e) {
-                      debugPrint(
-                        "Erro ao salvar o nome: $e",
-                      );
-                    }
-
-                    setState(
-                      () =>
-                          _isEditing =
-                              false,
-                    );
-                  }
-                },
-                icon: const Icon(
-                  Icons.check,
-                ),
-              ),
+    if (modo == 'disputa') {
+      if (gs.vidas > 0) {
+        gs.vidas--; // Custo de 1 vida para entrar na disputa
+        gs.notifyListeners();
+        
+        Navigator.pushNamed(context, AppRoutes.perfil, arguments: {
+          'modo': modo,
+          'isModoDisputa': true,
+        });
+      } else {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Ops! Sem vidas 💔"),
+            content: const Text("Você precisa de pelo menos 1 vida para entrar na Disputa. Visite a Loja!"),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))
             ],
           ),
-        ],
-      );
+        );
+      }
+    } else {
+      Navigator.pushNamed(context, AppRoutes.perfil, arguments: {
+        'modo': modo,
+        'isModoDisputa': false,
+      });
     }
+  }
 
-    return Column(
-      children: [
-        Padding(
-          padding:
-              const EdgeInsets.only(
-            top: 99,
-          ),
-          child: Text(
-            "OLÁ, ${nomeSalvo.toUpperCase()}!",
-            textAlign:
-                TextAlign.center,
-            style: const TextStyle(
-              color: Colors.black, // AJUSTADO: Cor alterada de Colors.white para Colors.black
-              fontSize: 20,
-              fontWeight:
-                  FontWeight.w900,
-              letterSpacing: 1.2,
-            ),
-          ),
-        ),
-
-        GestureDetector(
-          onTap: () {
-            _nomeController.text =
-                nomeSalvo;
-
-            setState(
-              () => _isEditing =
-                  true,
-            );
-          },
-          child: const Padding(
-            padding:
-                const EdgeInsets.only(
-              top: 4,
-            ),
-            child: Text(
-              "Editar apelido",
-              style: TextStyle(
-                color: AppColors
-                    .neonCiano,
-                fontSize: 11,
-                decoration:
-                    TextDecoration
-                        .underline,
-              ),
-            ),
-          ),
-        ),
-      ],
+  Widget _buildExitButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), 
+          borderRadius: BorderRadius.circular(14)),
+      child: IconButton(
+        icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 30),
+        onPressed: () async {
+          await Provider.of<AuthController>(context, listen: false).logout();
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        },
+      ),
     );
   }
 
-  // =========================================
-  // BOTÕES DOS MODOS
-  // =========================================
-  Widget _buildGameModeButton({
-    required BuildContext context,
-    required String titulo,
-    required String subtitulo,
-    required Color cor,
-    required String modo,
-  }) {
-    final authController =
-        Provider.of<AuthController>(
-      context,
-      listen: false,
-    );
-
-    String nomeAtual =
-        _nomeController.text.trim();
-
-    if (nomeAtual.isEmpty) {
-      try {
-        final dynamic usuario =
-            authController.usuarioAtual;
-
-        if (usuario != null) {
-          nomeAtual =
-              usuario.nomeExibicao ??
-              usuario.nome ??
-              "";
-        }
-      } catch (_) {}
-    }
-
-    if (nomeAtual.isEmpty) {
-      nomeAtual =
-          authController.nomeJogador;
-    }
-
+  Widget _buildRankingButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       height: 64,
       child: ElevatedButton(
-        onPressed: () {
-          if (nomeAtual.trim().isEmpty ||
-              _isEditing) {
-            ScaffoldMessenger.of(
-                    context)
-                .showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Digite e confirme seu apelido antes de continuar!",
-                ),
-                backgroundColor:
-                    Colors.orange,
-              ),
-            );
-
-            return;
-          }
-
-          // FLUXO LINEAR E SEGURO DE ROTAS:
-          // Direciona o jogador para a AppRoutes.perfil (Selecão de Avatar)
-          // empurrando os dados estruturados de modo de forma robusta.
-          Navigator.pushNamed(
-            context,
-            AppRoutes.perfil,
-            arguments: {
-              'nome': nomeAtual,
-              'modo': modo,
-              'isModoDisputa': modo == "disputa",
-              'disputa': modo == "disputa",
-            },
-          );
-        },
         style: ElevatedButton.styleFrom(
-          backgroundColor: cor,
-          foregroundColor:
-              AppColors
-                  .backgroundEscuro,
-          elevation: 0,
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(
-              18,
-            ),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+            backgroundColor: const Color(0xFF7CFFB2), 
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+        onPressed: () => Navigator.push(context, 
+            MaterialPageRoute(builder: (_) => const RankingScreen())),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              titulo,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight:
-                    FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              subtitulo,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors
-                    .backgroundEscuro
-                    .withOpacity(0.75),
-                fontWeight:
-                    FontWeight.w500,
-              ),
-            ),
+            Text("RANKING GLOBAL", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+            Text("Veja os melhores jogadores", style: TextStyle(fontSize: 11, color: Colors.black54)),
           ],
         ),
       ),
     );
   }
 
-  // =========================================
-  // BOTÃO RANKING
-  // =========================================
-  Widget _buildRankingButton(
-    BuildContext context,
-  ) {
-    return SizedBox(
-      width: double.infinity,
-      height: 64,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  const RankingScreen(),
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              const Color(0xFF7CFFB2),
-          foregroundColor:
-              AppColors
-                  .backgroundEscuro,
-          elevation: 0,
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(
-              18,
-            ),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-          children: [
-            const Text(
-              "RANKING GLOBAL",
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-                fontWeight:
-                    FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              "Veja os melhores jogadores",
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors
-                    .backgroundEscuro
-                    .withOpacity(0.75),
-                fontWeight:
-                    FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildBackgroundGlow() {
+    return Positioned(
+      top: -120, right: -120,
+      child: Container(width: 320, height: 320, 
+          decoration: BoxDecoration(shape: BoxShape.circle, 
+          color: AppColors.neonCiano.withValues(alpha: 0.12))),
     );
   }
-
-  // =========================================
-  // VERSÃO
-  // =========================================
-  Widget _buildVersionFooter() {
-    return const Positioned(
-      bottom: 20,
-      left: 0,
-      right: 0,
-      child: Text(
-        "v1.0.0+1",
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: Colors.white38,
-          fontSize: 12,
-         ),
-       ),
-     );
-   }
 }

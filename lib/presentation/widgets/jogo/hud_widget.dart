@@ -17,33 +17,51 @@ class HUDWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: isDisputa ? Colors.black.withOpacity(0.8) : Colors.white.withAlpha(230),
-        borderRadius: BorderRadius.circular(15),
+        color: isDisputa 
+            ? Colors.black.withOpacity(0.7) 
+            : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDisputa ? Colors.purpleAccent : Colors.greenAccent, width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildItem("FASE", "${state.fase}/10", isDisputa),
-          _buildItem("PERGUNTA", "${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}", isDisputa),
-          _buildItem("TEMPO", isDisputa ? state.formatarMinutos(state.tempoAcumuladoNivel) : "${tempoRestante}s", isDisputa, destaque: true),
-          _buildItem("XP", "${state.pontos}", isDisputa),
+          _buildItem(Icons.layers, "FASE", "${state.fase}/10"),
+          _buildItem(Icons.help_outline, "QST", "${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}"),
+          _buildItem(Icons.timer, "TIME", isDisputa ? state.formatarMinutos(state.tempoAcumuladoNivel) : "${tempoRestante}s", destaque: true),
+          _buildItem(Icons.star, "XP", "${state.pontos}"),
         ],
       ),
     );
   }
 
-  Widget _buildItem(String label, String valor, bool isDisputa, {bool destaque = false}) {
+  Widget _buildItem(IconData icon, String label, String valor, {bool destaque = false}) {
+    final Color corPrincipal = isDisputa ? Colors.white : Colors.black87;
+    final Color corDestaque = destaque ? (isDisputa ? Colors.purpleAccent : Colors.green[700]!) : corPrincipal;
+
     return Column(
       children: [
-        Text(valor, style: TextStyle(
-          fontWeight: FontWeight.bold, 
-          fontSize: 16, 
-          color: destaque && isDisputa ? Colors.purpleAccent : (isDisputa ? Colors.white : Colors.black)
+        Row(
+          children: [
+            Icon(icon, size: 14, color: corDestaque),
+            const SizedBox(width: 4),
+            Text(valor, style: TextStyle(
+              fontWeight: FontWeight.w900, 
+              fontSize: 16, 
+              color: corDestaque
+            )),
+          ],
+        ),
+        Text(label, style: TextStyle(
+          fontSize: 9, 
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+          color: isDisputa ? Colors.white60 : Colors.black54
         )),
-        Text(label, style: TextStyle(fontSize: 10, color: isDisputa ? Colors.white60 : Colors.grey)),
       ],
     );
   }

@@ -100,6 +100,8 @@ class JogoFlowService {
   void gerarPergunta() {
     try {
       final gameState = context.read<GameState>();
+      
+      // Utiliza o getter nivelParaService que ajustamos no GameState
       final pergunta = perguntaService.gerar(
         perfil: perfil,
         nivel: gameState.nivelParaService,
@@ -138,7 +140,8 @@ class JogoFlowService {
   void processarAcerto({required VoidCallback onConcluirFase}) {
     final gameState = context.read<GameState>();
 
-    gameState.registrarAcerto(tempoRestante: tempoRestante);
+    // O registrarAcerto agora gerencia o XP do perfil ativo internamente
+    gameState.registrarAcerto(tempoRestante: tempoRestante, ehModoDisputa: disputaAtiva);
     HapticFeedback.mediumImpact();
 
     if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {

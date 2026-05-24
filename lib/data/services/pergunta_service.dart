@@ -12,6 +12,12 @@ class PerguntaService {
   String _id(Pergunta p) => "${p.tipo}_${p.pergunta}_${p.resposta}";
 
   // =====================================================
+  // 🚀 MÉTODOS DE CONTROLE
+  // =====================================================
+
+  void resetarExperiencia() => _limparHistorico();
+
+  // =====================================================
   // 🚀 ENTRADA UNIVERSAL
   // =====================================================
 
@@ -40,21 +46,21 @@ class PerguntaService {
   }
 
   // =====================================================
-  // 👶 PERFIL: CRIANÇA
+  // 👶 PERFIL: CRIANÇA (Progressão dinâmica por fase)
   // =====================================================
 
   Pergunta _gerarCrianca(String nivel, int fase) {
     return switch (nivel) {
       "Bronze" => fase <= 3 
-          ? _operacaoBasica("+", 1, 10 + fase) 
-          : _operacaoBasica("-", 5, 15 + fase),
+          ? _operacaoBasica("+", 1, 10 + fase, fase) 
+          : _operacaoBasica("-", 5, 15 + fase, fase),
       "Prata"  => fase <= 3 
-          ? _operacaoBasica("×", 2, 5) 
+          ? _operacaoBasica("×", 2, 5 + (fase * 2), fase) 
           : _problemaSimples(),
       "Ouro"   => fase <= 3 ? _divisao() : _problemaMedio(),
       "Platina"=> fase <= 3 ? _fracaoSimples() : _porcentagemBasica(),
       "Mestre" => _problemaDificil(fase),
-      _        => _operacaoBasica("+", 1, 10),
+      _        => _operacaoBasica("+", 1, 10, fase),
     };
   }
 
@@ -64,7 +70,7 @@ class PerguntaService {
 
   Pergunta _gerarAdulto(String nivel, int fase) {
     return switch (nivel) {
-      "Bronze" => fase <= 3 ? _operacaoBasica("×", 5, 12) : _divisao(),
+      "Bronze" => fase <= 3 ? _operacaoBasica("×", 5, 12, fase) : _divisao(),
       "Prata"  => fase <= 3 ? _numeroNegativo() : _expressaoNumerica(fase),
       "Ouro"   => fase <= 3 ? _equacao1Grau(fase) : _porcentagemAvancada(),
       "Platina"=> fase <= 3 ? _regraDeTres() : _raizQuadrada(),
@@ -74,7 +80,7 @@ class PerguntaService {
           _raizQuadrada, 
           _potenciaAvancada
         ]),
-      _        => _operacaoBasica("+", 10, 50),
+      _        => _operacaoBasica("+", 10, 50, fase),
     };
   }
 
@@ -94,20 +100,21 @@ class PerguntaService {
           _raizQuadrada, 
           () => _problemaDificil(fase)
         ]),
-      _        => _operacaoBasica("×", 12, 30),
+      _        => _operacaoBasica("×", 12, 30, fase),
     };
   }
 
   // =====================================================
-  // 🎲 GERADORES
+  // 🎲 GERADORES (Com lógica de fase integrada)
   // =====================================================
 
-  Pergunta _operacaoBasica(String op, int min, int max) {
-    int a = rand.nextInt(max - min) + min;
-    int b = rand.nextInt(max - min) + min;
+  Pergunta _operacaoBasica(String op, int minBase, int maxBase, int fase) {
+    int max = maxBase + (fase * 2);
+    int a = rand.nextInt(max - minBase) + minBase;
+    int b = rand.nextInt(max - minBase) + minBase;
     if (op == "-" && a < b) { final temp = a; a = b; b = temp; }
     
-    int resultado = switch (op) {
+    num resultado = switch (op) {
       "+" => a + b,
       "-" => a - b,
       "×" => a * b,
@@ -119,7 +126,7 @@ class PerguntaService {
   Pergunta _divisao() {
     int b = rand.nextInt(8) + 2;
     int r = rand.nextInt(9) + 2;
-    return _base("${b * r} ÷ $b", r, "divisao");
+    return _base("${b * r} ÷ $b", b * r / b, "divisao");
   }
 
   Pergunta _equacao1Grau(int fase) {
@@ -133,13 +140,13 @@ class PerguntaService {
   Pergunta _porcentagemBasica() {
     final valores = [50, 100, 200, 500, 1000];
     int valor = valores[rand.nextInt(valores.length)];
-    return _base("10% de $valor", valor ~/ 10, "porcentagem");
+    return _base("10% de $valor", valor / 10, "porcentagem");
   }
 
   Pergunta _porcentagemAvancada() {
     int valor = (rand.nextInt(9) + 1) * 100;
     int perc = (rand.nextInt(3) + 1) * 15;
-    int r = (valor * perc) ~/ 100;
+    num r = (valor * perc) / 100;
     return _base("$perc% de $valor", r, "porcentagem");
   }
 
@@ -147,14 +154,14 @@ class PerguntaService {
     int a = 2;
     int b = (rand.nextInt(10) + 2) * 2;
     int c = rand.nextInt(5) + 3;
-    int x = (b * c) ~/ a;
+    num x = (b * c) / a;
     return _base("Se $a itens custam R\$ $b, quanto custam $c?", x, "regra3");
   }
 
   Pergunta _potenciaAvancada() {
     int b = rand.nextInt(3) + 2;
     int e = rand.nextInt(3) + 3;
-    int r = pow(b, e).toInt();
+    num r = pow(b, e);
     return _base("$b^$e", r, "potencia");
   }
 
@@ -183,38 +190,33 @@ class PerguntaService {
     int n = r * den;
     
     String termo = switch(den) {
-      2 => "a metade",
-      3 => "a terça parte",
-      4 => "a quarta parte",
-      5 => "a quinta parte",
+      2 => "a metade", 3 => "a terça parte", 4 => "a quarta parte", 5 => "a quinta parte",
       _ => "a parte"
     };
-
     return _base("Quanto é $termo de $n?", r, "fracao");
   }
 
   Pergunta _problemaDificil(int fase) {
     int total = (rand.nextInt(50) + 20) * 2;
     int extra = 10 + fase;
-    return _base("A metade de $total somada com $extra", (total ~/ 2) + extra, "problema");
+    return _base("A metade de $total somada com $extra", (total / 2) + extra, "problema");
   }
 
-  Pergunta _problemaSimples() => _operacaoBasica("+", 15, 45);
-  Pergunta _problemaMedio() => _operacaoBasica("×", 4, 12);
+  Pergunta _problemaSimples() => _operacaoBasica("+", 15, 45, 1);
+  Pergunta _problemaMedio() => _operacaoBasica("×", 4, 12, 1);
 
   // =====================================================
-  // 🛠 HELPER DE FORMATAÇÃO E DICAS (LIMPO)
+  // 🛠 HELPER DE FORMATAÇÃO E SEGURANÇA
   // =====================================================
 
-  Pergunta _base(String exp, int resultado, String tipo) {
+  Pergunta _base(String exp, num resultado, String tipo) {
     String questao = exp.trim();
-    
-    if (!questao.toLowerCase().contains("quanto") && 
-        !questao.toLowerCase().contains("se") && 
-        !questao.contains("?")) {
+    // Normaliza resultado para string (remove .0 se for inteiro)
+    String res = (resultado % 1 == 0) ? resultado.toInt().toString() : resultado.toString();
+
+    if (!questao.toLowerCase().contains("quanto") && !questao.toLowerCase().contains("se") && !questao.contains("?")) {
       questao = "Quanto é $questao";
     }
-
     if (!questao.endsWith("?") && !questao.endsWith("=")) {
       questao = "$questao =";
     }
@@ -224,29 +226,23 @@ class PerguntaService {
     bool temMultOuDiv = exp.contains('×') || exp.contains('÷');
 
     if (temSomaOuSub && temMultOuDiv) {
-      dica = "⚠️ Ordem das Operações: Resolva as multiplicações ou divisões primeiro, depois faça a soma ou subtração!";
+      dica = "⚠️ Ordem das Operações: Resolva as multiplicações ou divisões primeiro!";
     } else {
-      // DICAS LIMPAS SEM WILDCARDS DESNECESSÁRIOS
       dica = switch (tipo) {
         "basica" when exp.contains('+') => "Somar é o mesmo que juntar quantidades!",
-        "basica" when exp.contains('-') => "Na subtração, você descobre quanto sobra ao tirar uma parte.",
-        "basica" when exp.contains('×') => "A multiplicação é uma soma repetida. $exp significa somar o mesmo número várias vezes.",
-        "divisao"     => "Dividir é repartir um valor em partes iguais.",
-        "equacao"     => "Pense no 'x' como um buraco vazio que você precisa preencher para a conta dar certo.",
-        "porcentagem" => "Porcentagem é uma parte de 100. Dica: 10% é só dividir por 10!",
-        "fracao"      => "Frações são pedaços de um todo. Divida o número pelo denominador indicado.",
-        "raiz"        => "Qual número que, multiplicado por ele mesmo, resulta no valor que está dentro da raiz?",
-        "regra3"      => "Tente descobrir o valor de 1 unidade primeiro para depois multiplicar pela quantidade desejada.",
-        _             => "Leia com atenção e resolva um passo de cada vez. Você consegue!"
+        "basica" when exp.contains('-') => "Subtração é o que sobra ao tirar uma parte.",
+        "basica" when exp.contains('×') => "Multiplicação é uma soma repetida.",
+        "divisao"     => "Dividir é repartir em partes iguais.",
+        "equacao"     => "Pense no 'x' como um buraco vazio a preencher.",
+        "porcentagem" => "Dica: 10% é o mesmo que dividir por 10!",
+        "fracao"      => "Frações são pedaços de um todo.",
+        "raiz"        => "Qual número multiplicado por ele mesmo dá esse valor?",
+        "regra3"      => "Descubra o valor unitário primeiro.",
+        _             => "Leia com atenção, você consegue!"
       };
     }
 
-    return Pergunta(
-      pergunta: questao,
-      resposta: resultado.toString(),
-      tipo: tipo,
-      dica: dica,
-    );
+    return Pergunta(pergunta: questao, resposta: res, tipo: tipo, dica: dica);
   }
 
   void _adicionarAoHistorico(Pergunta p) {

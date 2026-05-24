@@ -1,18 +1,19 @@
 // lib/presentation/screens/jogo_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/game_state.dart';
 import '../../../data/services/pergunta_service.dart';
 import '../../../data/services/jogo_flow_service.dart';
 import '../../../data/services/jogo_voice_service.dart';
+import '../../../core/enums/nivel_enum.dart';
+import '../../../core/theme/app_colors.dart';
 
 import '../widgets/jogo/area_pergunta.dart';
 import '../widgets/jogo/hud_widget.dart';
 import '../widgets/jogo/progress_widget.dart';
-import '../widgets/jogo/jogo_action_button.dart';
-import '../widgets/jogo/mascote_dica_widget.dart';
 
 class JogoScreen extends StatefulWidget {
   final String perfil;
@@ -27,10 +28,10 @@ class JogoScreen extends StatefulWidget {
 class _JogoScreenState extends State<JogoScreen> {
   late JogoFlowService _flow;
   late JogoVoiceService _voice;
-  
+
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
-  final FocusNode _keyboardFocusNode = FocusNode();
+  final FocusNode _botaoComecarFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -44,7 +45,10 @@ class _JogoScreenState extends State<JogoScreen> {
       atualizarTela: () => setState(() {}),
     );
     _voice = JogoVoiceService(context: context);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _keyboardFocusNode.requestFocus());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _botaoComecarFocusNode.requestFocus();
+    });
   }
 
   @override
@@ -53,7 +57,7 @@ class _JogoScreenState extends State<JogoScreen> {
     _voice.pararTudo();
     _respostaController.dispose();
     _respostaFocusNode.dispose();
-    _keyboardFocusNode.dispose();
+    _botaoComecarFocusNode.dispose();
     super.dispose();
   }
 
@@ -73,14 +77,13 @@ class _JogoScreenState extends State<JogoScreen> {
   void _executarValidacao() {
     _flow.validarResposta(
       onAcerto: () {
-        _flow.processarAcerto(
-          onConcluirFase: () {
-            _mostrarDialogo(true);
-          },
-        );
+        HapticFeedback.lightImpact();
+        context.read<GameState>().registrarAcerto(tempoRestante: _flow.tempoRestante, ehModoDisputa: widget.isModoDisputa);
+        _flow.processarAcerto(onConcluirFase: () => _mostrarDialogo(true));
         _garantirFoco();
       },
       onErro: (correta) {
+        HapticFeedback.heavyImpact();
         _flow.pausarJogo();
         _mostrarDialogo(false, correta: correta);
       },
@@ -88,23 +91,35 @@ class _JogoScreenState extends State<JogoScreen> {
   }
 
   void _mostrarDialogo(bool isFimFase, {String correta = ""}) {
+    final gs = context.read<GameState>();
+    final bool ehFinalAbsoluto = isFimFase && gs.nivelAtual == Nivel.mestre;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Focus(
+      builder: (_) => FocusScope(
         autofocus: true,
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-            _confirmarDialogo(isFimFase);
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
         child: AlertDialog(
-          title: Text(isFimFase ? "Muito Bem! 🌟" : "Ops! ❌"),
-          content: Text(isFimFase ? "Você completou a fase com sucesso!" : "A resposta correta era: $correta"),
+          title: Text(ehFinalAbsoluto ? "👑🏆 CONQUISTA MÁXIMA!" : (isFimFase ? "🎉 Parabéns!" : "❌ Ops!")),
+          content: Text(
+            ehFinalAbsoluto
+                ? "👑🏆 INCRÍVEL! Você completou todos os níveis! 🏆👑"
+                : (isFimFase
+                    ? "🎉 Parabéns!\nVocê passou de fase! 🚀"
+                    : "❌ Ops! A resposta correta era: $correta"),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 15),
+          ),
           actions: [
-            TextButton(onPressed: () => _confirmarDialogo(isFimFase), child: const Text("CONTINUAR"))
+            ElevatedButton(
+              autofocus: true,
+              onPressed: () {
+                Navigator.pop(context);
+                if (ehFinalAbsoluto) Navigator.of(context).pushReplacementNamed('/home_view');
+                else _confirmarDialogo(isFimFase);
+              },
+              child: Text(isFimFase ? "CONTINUAR" : "TENTAR NOVAMENTE"),
+            ),
           ],
         ),
       ),
@@ -112,75 +127,140 @@ class _JogoScreenState extends State<JogoScreen> {
   }
 
   void _confirmarDialogo(bool isFimFase) {
-    Navigator.pop(context);
-    
-    if (isFimFase) {
-      // Avança para a próxima fase
-      context.read<GameState>().concluirEAvancarFase();
-    } else {
-      // ERRO: Reseta o índice da pergunta para o início da fase atual
-      context.read<GameState>().resetarFaseAtual(); 
-    }
-    
-    // Reinicia o desafio (seja a nova fase ou o recomeço da atual)
+    final gs = context.read<GameState>();
+    isFimFase ? gs.concluirEAvancarFase() : gs.resetarNivelParaInicio();
     _flow.iniciarDesafio(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
     _garantirFoco();
   }
 
-  void _exibirDica() {
-    if (_flow.perguntaAtual == null) return;
-    showDialog(context: context, builder: (_) => AlertDialog(title: const Text("Dica do Cal 🤖"), content: Text(_flow.perguntaAtual!.dica), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))]));
+  void _toggleMicrofone() {
+    _voice.acionarMicrofone(jogoAtivo: _flow.jogoAtivo, onTextoCapturado: (t) {
+      setState(() => _respostaController.text = t);
+      _executarValidacao();
+    }, onFinalizado: () {});
   }
 
-  void _toggleMicrofone() {
-    _voice.acionarMicrofone(jogoAtivo: _flow.jogoAtivo, onTextoCapturado: (t) { setState(() => _respostaController.text = t); _executarValidacao(); }, onFinalizado: () {});
+  void _exibirDica() {
+    showDialog(
+      context: context,
+      builder: (_) => FocusScope(
+        autofocus: true,
+        child: AlertDialog(
+          title: const Text("Dica do Cal! 💡"),
+          content: Text(_flow.perguntaAtual?.dica ?? "Analise com calma!"),
+          actions: [
+            TextButton(
+              autofocus: true,
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Entendi!"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    return Focus(
-      focusNode: _keyboardFocusNode,
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-          !_flow.jogoAtivo ? _iniciarJogo() : _executarValidacao();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: () => _keyboardFocusNode.requestFocus(),
-        child: Scaffold(
-          body: Stack(
-            children: [
-              Positioned.fill(child: Image.asset('assets/images/crianca.png', fit: BoxFit.cover)),
-              SafeArea(
-                child: Column(
-                  children: [
-                    Align(alignment: Alignment.topLeft, child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context))),
-                    Container(
-                      margin: const EdgeInsets.only(top: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(20)),
-                      child: Text(_flow.disputaAtiva ? "🏁 MODO DISPUTA ATIVO" : "🧠 MODO TREINO ATIVO", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                    const SizedBox(height: 50),
-                    HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.tempoRestante),
-                    const SizedBox(height: 12),
-                    ProgressWidget(perguntaAtual: gs.indicePerguntaAtual, totalPerguntas: gs.maxPerguntasPorFase, disputaAtiva: _flow.disputaAtiva),
-                    const Spacer(),
-                    AreaPerguntaWidget(perguntaAtual: _flow.perguntaAtual, jogoAtivo: _flow.jogoAtivo, disputaAtiva: _flow.disputaAtiva, controller: _respostaController, focusNode: _respostaFocusNode, onValidar: _executarValidacao),
-                    const Spacer(flex: 2),
-                    JogoActionButton(jogoAtivo: _flow.jogoAtivo, disputaAtiva: _flow.disputaAtiva, estaOuvindo: _voice.estaOuvindo, onIniciar: _iniciarJogo, onValidar: _executarValidacao, onMicrofone: _toggleMicrofone),
-                    const SizedBox(height: 30),
+    return Scaffold(
+      backgroundColor: Colors.black, // Cor de backup
+      body: Stack(
+        children: [
+          // FUNDO CORRIGIDO: Preenche tudo sem tarja preta
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/${widget.perfil}.png',
+              fit: BoxFit.cover,
+              // Alignment.topCenter garante que o topo da imagem (com o nome)
+              // esteja sempre visível no topo da tela.
+              alignment: Alignment.topCenter, 
+              errorBuilder: (context, error, stackTrace) => 
+                  Image.asset('assets/images/fundo_jogo.png', fit: BoxFit.cover, alignment: Alignment.topCenter),
+            ),
+          ),
+
+          // FILTRO DEGRADÊ SUPERIOR: Garante que o texto "Matemática Divertida" 
+          // e o HUD fiquem legíveis, sem cortar a imagem.
+          Positioned(
+            top: 0, left: 0, right: 0,
+            height: 80, // Altura suficiente para cobrir o nome e o HUD
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.8), // Mais escuro no topo
+                    Colors.transparent, // Suaviza até ficar transparente
                   ],
                 ),
               ),
-              if (_flow.jogoAtivo && !_flow.disputaAtiva) Positioned(bottom: 150, right: 20, child: MascoteDicaWidget(onExibirDica: _exibirDica)),
-            ],
+            ),
           ),
-        ),
+
+          Positioned(
+            bottom: 120, right: 20,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1.0, end: 1.1),
+              duration: const Duration(seconds: 1),
+              curve: Curves.easeInOut,
+              builder: (context, scale, child) => Transform.scale(
+                scale: scale,
+                child: GestureDetector(
+                  onTap: _exibirDica,
+                  child: Image.asset('assets/images/mascote_cal.png', width: 144, height: 144, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
+                  IconButton(icon: Icon(gs.acessibilidadeVoz ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
+                ]),
+                HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.tempoRestante),
+                ProgressWidget(perguntaAtual: gs.indicePerguntaAtual, totalPerguntas: gs.maxPerguntasPorFase, disputaAtiva: _flow.disputaAtiva),
+                const Spacer(),
+                if (!_flow.jogoAtivo)
+                  Center(
+                    child: Focus(
+                      focusNode: _botaoComecarFocusNode,
+                      onKey: (node, event) {
+                        if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+                          _iniciarJogo();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: ElevatedButton(
+                        onPressed: _iniciarJogo,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                        child: const Text("COMEÇAR", style: TextStyle(fontSize: 28, color: Colors.white)),
+                      ),
+                    ),
+                  )
+                else
+                  AreaPerguntaWidget(
+                    key: ValueKey(_flow.perguntaAtual?.pergunta),
+                    perguntaAtual: _flow.perguntaAtual,
+                    jogoAtivo: _flow.jogoAtivo,
+                    disputaAtiva: _flow.disputaAtiva,
+                    controller: _respostaController,
+                    focusNode: _respostaFocusNode,
+                    onValidar: _executarValidacao,
+                  ),
+                const Spacer(flex: 2),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

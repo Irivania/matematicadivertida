@@ -1,5 +1,4 @@
 // lib/presentation/widgets/jogo/progress_widget.dart
-
 import 'package:flutter/material.dart';
 
 class ProgressWidget extends StatelessWidget {
@@ -16,41 +15,41 @@ class ProgressWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double progresso =
-        totalPerguntas > 0
-            ? perguntaAtual / totalPerguntas
-            : 0;
+    // Garante que o progresso sempre tenha um mínimo visual para a barra não sumir
+    final double progresso = totalPerguntas > 0 
+        ? (perguntaAtual / totalPerguntas).clamp(0.05, 1.0) 
+        : 0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 40,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
       child: Column(
         children: [
+          // Barra de progresso com um brilho suave
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
-              value: progresso.clamp(0.0, 1.0),
-              minHeight: 12,
-              backgroundColor: Colors.white24,
+              value: progresso,
+              minHeight: 14, // Um pouco maior para melhor visualização
+              backgroundColor: Colors.white.withOpacity(0.2),
               valueColor: AlwaysStoppedAnimation<Color>(
-                disputaAtiva
-                    ? Colors.purpleAccent
-                    : Colors.greenAccent,
+                disputaAtiva ? Colors.purpleAccent : Colors.greenAccent,
               ),
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
+          // Texto com sombra para garantir leitura em qualquer fundo
           Text(
-            "$perguntaAtual / $totalPerguntas",
-            style: TextStyle(
-              color: disputaAtiva
-                  ? Colors.white
-                  : Colors.black,
+            "PERGUNTA $perguntaAtual DE $totalPerguntas",
+            style: const TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 14,
+              letterSpacing: 1.2,
+              shadows: [
+                Shadow(color: Colors.black, blurRadius: 4, offset: Offset(1, 1))
+              ],
             ),
           ),
         ],
