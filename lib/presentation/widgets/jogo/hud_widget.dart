@@ -1,4 +1,3 @@
-// lib/presentation/widgets/jogo/hud_widget.dart
 import 'package:flutter/material.dart';
 import '../../../data/models/game_state.dart';
 
@@ -7,30 +6,23 @@ class HUDWidget extends StatelessWidget {
   final bool isDisputa;
   final int tempoRestante;
 
-  const HUDWidget({
-    super.key, 
-    required this.state, 
-    required this.isDisputa, 
-    required this.tempoRestante
-  });
+  const HUDWidget({super.key, required this.state, required this.isDisputa, required this.tempoRestante});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       decoration: BoxDecoration(
-        color: isDisputa 
-            ? Colors.black.withOpacity(0.7) 
-            : Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDisputa ? Colors.purpleAccent : Colors.greenAccent, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+        color: isDisputa ? Colors.black.withOpacity(0.7) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: isDisputa ? Colors.purpleAccent : Colors.greenAccent, width: 1.2),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround, // Espaçamento mais otimizado
         children: [
-          _buildItem(Icons.layers, "FASE", "${state.fase}/10"),
+          _buildItemFase(),
           _buildItem(Icons.help_outline, "QST", "${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}"),
           _buildItem(Icons.timer, "TIME", isDisputa ? state.formatarMinutos(state.tempoAcumuladoNivel) : "${tempoRestante}s", destaque: true),
           _buildItem(Icons.star, "XP", "${state.pontos}"),
@@ -39,29 +31,37 @@ class HUDWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildItem(IconData icon, String label, String valor, {bool destaque = false}) {
-    final Color corPrincipal = isDisputa ? Colors.white : Colors.black87;
-    final Color corDestaque = destaque ? (isDisputa ? Colors.purpleAccent : Colors.green[700]!) : corPrincipal;
-
-    return Column(
+  Widget _buildItemFase() {
+    final Color cor = isDisputa ? Colors.white : Colors.black87;
+    final nivel = state.nivelAtual;
+    return Row(
       children: [
-        Row(
+        Icon(nivel.icone, size: 18, color: nivel.cor),
+        const SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 14, color: corDestaque),
-            const SizedBox(width: 4),
-            Text(valor, style: TextStyle(
-              fontWeight: FontWeight.w900, 
-              fontSize: 16, 
-              color: corDestaque
-            )),
+            Text("${state.fase}/10", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: cor)),
+            Text(nivel.label.toUpperCase(), style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey)),
           ],
         ),
-        Text(label, style: TextStyle(
-          fontSize: 9, 
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-          color: isDisputa ? Colors.white60 : Colors.black54
-        )),
+      ],
+    );
+  }
+
+  Widget _buildItem(IconData icon, String label, String valor, {bool destaque = false}) {
+    final Color corDestaque = destaque ? (isDisputa ? Colors.purpleAccent : Colors.green[700]!) : (isDisputa ? Colors.white : Colors.black87);
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: corDestaque),
+        const SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(valor, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: corDestaque)),
+            Text(label, style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey)),
+          ],
+        ),
       ],
     );
   }

@@ -13,7 +13,7 @@ import '../../../core/theme/app_colors.dart';
 
 import '../widgets/jogo/area_pergunta.dart';
 import '../widgets/jogo/hud_widget.dart';
-import '../widgets/jogo/progress_widget.dart';
+// Removido: ProgressWidget (não será mais usado pois a info está no HUD)
 
 class JogoScreen extends StatefulWidget {
   final String perfil;
@@ -164,56 +164,19 @@ class _JogoScreenState extends State<JogoScreen> {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     return Scaffold(
-      backgroundColor: Colors.black, // Cor de backup
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // FUNDO CORRIGIDO: Preenche tudo sem tarja preta
           Positioned.fill(
             child: Image.asset(
               'assets/images/${widget.perfil}.png',
               fit: BoxFit.cover,
-              // Alignment.topCenter garante que o topo da imagem (com o nome)
-              // esteja sempre visível no topo da tela.
-              alignment: Alignment.topCenter, 
+              alignment: Alignment.topCenter,
               errorBuilder: (context, error, stackTrace) => 
                   Image.asset('assets/images/fundo_jogo.png', fit: BoxFit.cover, alignment: Alignment.topCenter),
             ),
           ),
 
-          // FILTRO DEGRADÊ SUPERIOR: Garante que o texto "Matemática Divertida" 
-          // e o HUD fiquem legíveis, sem cortar a imagem.
-          Positioned(
-            top: 0, left: 0, right: 0,
-            height: 80, // Altura suficiente para cobrir o nome e o HUD
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.8), // Mais escuro no topo
-                    Colors.transparent, // Suaviza até ficar transparente
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 120, right: 20,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 1.0, end: 1.1),
-              duration: const Duration(seconds: 1),
-              curve: Curves.easeInOut,
-              builder: (context, scale, child) => Transform.scale(
-                scale: scale,
-                child: GestureDetector(
-                  onTap: _exibirDica,
-                  child: Image.asset('assets/images/mascote_cal.png', width: 144, height: 144, fit: BoxFit.contain),
-                ),
-              ),
-            ),
-          ),
           SafeArea(
             child: Column(
               children: [
@@ -221,9 +184,15 @@ class _JogoScreenState extends State<JogoScreen> {
                   IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
                   IconButton(icon: Icon(gs.acessibilidadeVoz ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
                 ]),
+                
+                const SizedBox(height: 245), 
+                
                 HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.tempoRestante),
-                ProgressWidget(perguntaAtual: gs.indicePerguntaAtual, totalPerguntas: gs.maxPerguntasPorFase, disputaAtiva: _flow.disputaAtiva),
+                
+                // ProgressWidget removido para limpar a tela
+                
                 const Spacer(),
+                
                 if (!_flow.jogoAtivo)
                   Center(
                     child: Focus(
@@ -257,6 +226,40 @@ class _JogoScreenState extends State<JogoScreen> {
                     onValidar: _executarValidacao,
                   ),
                 const Spacer(flex: 2),
+              ],
+            ),
+          ),
+
+          Positioned(
+            bottom: 120, right: 20,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: _exibirDica,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      border: Border.all(color: Colors.blueAccent, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text("Dica", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _exibirDica,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.white.withOpacity(0.6), blurRadius: 25, spreadRadius: 8),
+                      ],
+                    ),
+                    child: Image.asset('assets/images/mascote_cal.png', width: 144, height: 144, fit: BoxFit.contain),
+                  ),
+                ),
               ],
             ),
           ),
