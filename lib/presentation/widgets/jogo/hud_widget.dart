@@ -1,12 +1,18 @@
+// lib/presentation/widgets/jogo/hud_widget.dart
 import 'package:flutter/material.dart';
 import '../../../data/models/game_state.dart';
 
 class HUDWidget extends StatelessWidget {
   final GameState state;
   final bool isDisputa;
-  final int tempoRestante;
+  final int tempoRestante; // Aqui chegará o tempo crescente (treino) ou decrescente (disputa)
 
-  const HUDWidget({super.key, required this.state, required this.isDisputa, required this.tempoRestante});
+  const HUDWidget({
+    super.key, 
+    required this.state, 
+    required this.isDisputa, 
+    required this.tempoRestante
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +26,20 @@ class HUDWidget extends StatelessWidget {
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround, // Espaçamento mais otimizado
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildItemFase(),
           _buildItem(Icons.help_outline, "QST", "${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}"),
-          _buildItem(Icons.timer, "TIME", isDisputa ? state.formatarMinutos(state.tempoAcumuladoNivel) : "${tempoRestante}s", destaque: true),
+          
+          // Lógica de tempo ajustada:
+          // Se disputa, mostra decrescente (ex: 59s). Se treino, mostra crescente (ex: 01:20).
+          _buildItem(
+            Icons.timer, 
+            "TIME", 
+            isDisputa ? "$tempoRestante s" : state.formatarMinutos(tempoRestante), 
+            destaque: true
+          ),
+          
           _buildItem(Icons.star, "XP", "${state.pontos}"),
         ],
       ),
@@ -50,7 +65,10 @@ class HUDWidget extends StatelessWidget {
   }
 
   Widget _buildItem(IconData icon, String label, String valor, {bool destaque = false}) {
-    final Color corDestaque = destaque ? (isDisputa ? Colors.purpleAccent : Colors.green[700]!) : (isDisputa ? Colors.white : Colors.black87);
+    final Color corDestaque = destaque 
+        ? (isDisputa ? Colors.purpleAccent : Colors.green[700]!) 
+        : (isDisputa ? Colors.white : Colors.black87);
+    
     return Row(
       children: [
         Icon(icon, size: 12, color: corDestaque),

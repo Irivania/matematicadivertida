@@ -1,19 +1,15 @@
 // lib/presentation/screens/jogo_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/game_state.dart';
 import '../../../data/services/pergunta_service.dart';
 import '../../../data/services/jogo_flow_service.dart';
 import '../../../data/services/jogo_voice_service.dart';
-import '../../../core/enums/nivel_enum.dart';
-import '../../../core/theme/app_colors.dart';
-
 import '../widgets/jogo/area_pergunta.dart';
 import '../widgets/jogo/hud_widget.dart';
-// Removido: ProgressWidget (não será mais usado pois a info está no HUD)
+import '../widgets/jogo/progress_widget.dart';
 
 class JogoScreen extends StatefulWidget {
   final String perfil;
@@ -28,10 +24,11 @@ class JogoScreen extends StatefulWidget {
 class _JogoScreenState extends State<JogoScreen> {
   late JogoFlowService _flow;
   late JogoVoiceService _voice;
-
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
-  final FocusNode _botaoComecarFocusNode = FocusNode();
+  
+  // CORREÇÃO: Foco específico para o botão de menu
+  final _menuButtonFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -45,10 +42,6 @@ class _JogoScreenState extends State<JogoScreen> {
       atualizarTela: () => setState(() {}),
     );
     _voice = JogoVoiceService(context: context);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _botaoComecarFocusNode.requestFocus();
-    });
   }
 
   @override
@@ -57,105 +50,89 @@ class _JogoScreenState extends State<JogoScreen> {
     _voice.pararTudo();
     _respostaController.dispose();
     _respostaFocusNode.dispose();
-    _botaoComecarFocusNode.dispose();
+    _menuButtonFocusNode.dispose(); // CORREÇÃO
     super.dispose();
   }
 
-  void _garantirFoco() => WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_respostaFocusNode.canRequestFocus) _respostaFocusNode.requestFocus();
-  });
+  void _garantirFocoPergunta() {
+    Future.microtask(() {
+      if (_respostaFocusNode.canRequestFocus) _respostaFocusNode.requestFocus();
+    });
+  }
+  
+  // CORREÇÃO: Garante o foco no botão de menu ao abrir
+  void _garantirFocoMenu() {
+    Future.microtask(() {
+      if (_menuButtonFocusNode.canRequestFocus) _menuButtonFocusNode.requestFocus();
+    });
+  }
 
   void _iniciarJogo() {
     if (_flow.jogoAtivo) return;
+    context.read<GameState>().limparProgresso();
     _flow.iniciarDesafio(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
-    if (_flow.perguntaAtual != null) {
-      _voice.iniciarLeituraPergunta(pergunta: _flow.perguntaAtual!.pergunta, jogoAtivo: true, onAcionarMicrofone: _toggleMicrofone);
-      _garantirFoco();
-    }
+    _garantirFocoPergunta();
+  }
+
+  void _continuarPartida() {
+    context.read<GameState>().carregarProgresso();
+    _flow.continuarPartida();
+    _garantirFocoPergunta();
   }
 
   void _executarValidacao() {
     _flow.validarResposta(
       onAcerto: () {
         HapticFeedback.lightImpact();
-        context.read<GameState>().registrarAcerto(tempoRestante: _flow.tempoRestante, ehModoDisputa: widget.isModoDisputa);
+        context.read<GameState>().registrarAcerto(tempoRestante: _flow.displayTempo, ehModoDisputa: widget.isModoDisputa);
         _flow.processarAcerto(onConcluirFase: () => _mostrarDialogo(true));
-        _garantirFoco();
       },
       onErro: (correta) {
         HapticFeedback.heavyImpact();
         _flow.pausarJogo();
-        _mostrarDialogo(false, correta: correta);
+        _mostrarDialogo(false);
       },
     );
   }
 
-  void _mostrarDialogo(bool isFimFase, {String correta = ""}) {
-    final gs = context.read<GameState>();
-    final bool ehFinalAbsoluto = isFimFase && gs.nivelAtual == Nivel.mestre;
-
+  void _mostrarDialogo(bool isFimFase) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => FocusScope(
-        autofocus: true,
-        child: AlertDialog(
-          title: Text(ehFinalAbsoluto ? "👑🏆 CONQUISTA MÁXIMA!" : (isFimFase ? "🎉 Parabéns!" : "❌ Ops!")),
-          content: Text(
-            ehFinalAbsoluto
-                ? "👑🏆 INCRÍVEL! Você completou todos os níveis! 🏆👑"
-                : (isFimFase
-                    ? "🎉 Parabéns!\nVocê passou de fase! 🚀"
-                    : "❌ Ops! A resposta correta era: $correta"),
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: 15),
+      builder: (_) => AlertDialog(
+        title: Text(isFimFase ? "🎉 Fase Concluída!" : "❌ Ops!"),
+        content: Text(isFimFase ? "Preparando próxima fase... 🚀" : "Tente novamente!"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmarDialogo(isFimFase);
+            },
+            child: const Text("CONTINUAR"),
           ),
-          actions: [
-            ElevatedButton(
-              autofocus: true,
-              onPressed: () {
-                Navigator.pop(context);
-                if (ehFinalAbsoluto) Navigator.of(context).pushReplacementNamed('/home_view');
-                else _confirmarDialogo(isFimFase);
-              },
-              child: Text(isFimFase ? "CONTINUAR" : "TENTAR NOVAMENTE"),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   void _confirmarDialogo(bool isFimFase) {
-    final gs = context.read<GameState>();
-    isFimFase ? gs.concluirEAvancarFase() : gs.resetarNivelParaInicio();
-    _flow.iniciarDesafio(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
-    _garantirFoco();
+    if (isFimFase) {
+      context.read<GameState>().concluirEAvancarFase();
+      _flow.gerarPergunta();
+    } else {
+      _flow.retomarJogo();
+    }
+    _garantirFocoPergunta();
   }
-
-  void _toggleMicrofone() {
-    _voice.acionarMicrofone(jogoAtivo: _flow.jogoAtivo, onTextoCapturado: (t) {
-      setState(() => _respostaController.text = t);
-      _executarValidacao();
-    }, onFinalizado: () {});
-  }
-
+  
   void _exibirDica() {
+    if (!_flow.jogoAtivo || _flow.perguntaAtual == null) return;
     showDialog(
       context: context,
-      builder: (_) => FocusScope(
-        autofocus: true,
-        child: AlertDialog(
-          title: const Text("Dica do Cal! 💡"),
-          content: Text(_flow.perguntaAtual?.dica ?? "Analise com calma!"),
-          actions: [
-            TextButton(
-              autofocus: true,
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Entendi!"),
-            ),
-          ],
-        ),
+      builder: (_) => AlertDialog(
+        title: const Text("Dica do Cal! 💡"),
+        content: Text(_flow.perguntaAtual!.dica ?? "Analise com calma!"),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Entendi!"))],
       ),
     );
   }
@@ -163,56 +140,50 @@ class _JogoScreenState extends State<JogoScreen> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
+    
+    // CORREÇÃO: Garante o foco ao abrir a tela no menu
+    if (!_flow.jogoAtivo && !_menuButtonFocusNode.hasFocus) {
+       _garantirFocoMenu();
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/${widget.perfil}.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              errorBuilder: (context, error, stackTrace) => 
-                  Image.asset('assets/images/fundo_jogo.png', fit: BoxFit.cover, alignment: Alignment.topCenter),
-            ),
-          ),
-
+          Positioned.fill(child: Image.asset('assets/images/${widget.perfil}.png', fit: BoxFit.cover)),
+          
+          // CONTEÚDO PRINCIPAL (SafeArea)
           SafeArea(
             child: Column(
               children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
-                  IconButton(icon: Icon(gs.acessibilidadeVoz ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
+                  IconButton(icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
                 ]),
-                
-                const SizedBox(height: 245), 
-                
-                HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.tempoRestante),
-                
-                // ProgressWidget removido para limpar a tela
-                
+                const SizedBox(height: 245),
+                HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
+                ProgressWidget(perguntaAtual: gs.indicePerguntaAtual, totalPerguntas: gs.maxPerguntasPorFase, disputaAtiva: _flow.disputaAtiva),
                 const Spacer(),
-                
                 if (!_flow.jogoAtivo)
                   Center(
-                    child: Focus(
-                      focusNode: _botaoComecarFocusNode,
-                      onKey: (node, event) {
-                        if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-                          _iniciarJogo();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: ElevatedButton(
-                        onPressed: _iniciarJogo,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    child: Column(
+                      children: [
+                        if (gs.temPartidaSalva) _buildMenuButton("CONTINUAR", Colors.orange, _continuarPartida),
+                        const SizedBox(height: 20),
+                        
+                        // CORREÇÃO DEFINTIVA DE FOCO NO ENTER
+                        Focus(
+                          focusNode: _menuButtonFocusNode, // Usa o FocusNode específico
+                          onKey: (node, event) {
+                            if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+                              _iniciarJogo();
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: _buildMenuButton(gs.temPartidaSalva ? "NOVO JOGO" : "COMEÇAR", Colors.green, _iniciarJogo),
                         ),
-                        child: const Text("COMEÇAR", style: TextStyle(fontSize: 28, color: Colors.white)),
-                      ),
+                      ],
                     ),
                   )
                 else
@@ -229,42 +200,27 @@ class _JogoScreenState extends State<JogoScreen> {
               ],
             ),
           ),
-
+          
+          // MASCOTE CAL: Fixado no Stack, fora do SafeArea, com GestureDetector Translucid
           Positioned(
-            bottom: 120, right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: _exibirDica,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      border: Border.all(color: Colors.blueAccent, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text("Dica", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _exibirDica,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.white.withOpacity(0.6), blurRadius: 25, spreadRadius: 8),
-                      ],
-                    ),
-                    child: Image.asset('assets/images/mascote_cal.png', width: 144, height: 144, fit: BoxFit.contain),
-                  ),
-                ),
-              ],
+            bottom: 20, 
+            right: 20, 
+            child: GestureDetector(
+              onTap: _exibirDica,
+              behavior: HitTestBehavior.translucent, // CORREÇÃO DE TOQUE
+              child: Image.asset('assets/images/mascote_cal.png', width: 100),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMenuButton(String text, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+      child: Text(text, style: const TextStyle(fontSize: 28, color: Colors.white)),
     );
   }
 }

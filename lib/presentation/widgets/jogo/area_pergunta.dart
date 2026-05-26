@@ -1,6 +1,6 @@
 // lib/presentation/widgets/jogo/area_pergunta.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Import necessário para RawKeyboard
+import 'package:flutter/services.dart';
 import '../../../data/models/pergunta.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -28,7 +28,6 @@ class AreaPerguntaWidget extends StatelessWidget {
 
     return Column(
       children: [
-        // Pergunta
         Text(
           perguntaAtual?.pergunta ?? "",
           style: const TextStyle(
@@ -40,16 +39,17 @@ class AreaPerguntaWidget extends StatelessWidget {
         ),
         const SizedBox(height: 30),
 
-        // Campo de resposta
+        // Campo de resposta com foco automático
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: TextField(
             controller: controller,
             focusNode: focusNode,
+            autofocus: true, // <--- GARANTE QUE O TECLADO ABRA SOZINHO
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.send, // Muda de 'done' para 'send'
-            onSubmitted: (_) => onValidar(), // Aciona ao apertar Enter no teclado
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => onValidar(), // Enter envia a resposta
             style: TextStyle(
               color: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
               fontSize: 32,
@@ -69,30 +69,20 @@ class AreaPerguntaWidget extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // Botão de Enviar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: SizedBox(
             width: double.infinity,
             height: 60,
-            child: Focus(
-              onKey: (node, event) {
-                if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-                  onValidar();
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: ElevatedButton(
-                onPressed: onValidar,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                child: const Text(
-                  'RESPONDER',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                ),
+            child: ElevatedButton(
+              onPressed: onValidar,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: Text(
+                disputaAtiva ? 'ENVIAR RESPOSTA' : 'VERIFICAR APRENDIZADO',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ),
           ),
