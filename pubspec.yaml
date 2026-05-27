@@ -1,7 +1,6 @@
 name: matematicadivertida
 description: "Jogo educativo de matemática gamificado em Flutter com arquitetura reativa."
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -12,49 +11,34 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-
-  # 🧠 Gerenciamento de Estado
-  provider: 6.1.2
-
-  # 🔊 Áudio e Multimídia
+  provider: ^6.1.5
   audioplayers: ^6.0.0
+  
+  # Atualizados para compatibilidade com Kotlin 2.1.0
+  flutter_tts: ^4.2.5
+  speech_to_text: ^7.4.0
 
-  # 🎙️ Voz e acessibilidade
-  flutter_tts: ^4.1.0
-  speech_to_text: ^6.6.0
-
-  # 💾 Persistência local
   shared_preferences: ^2.5.5
 
-  # 🔥 Firebase
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.19.7
-  cloud_firestore: ^4.17.5
+  # Firebase atualizado para versões estáveis
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.0.0
   google_sign_in: ^6.2.1
 
-  # 🏁 Recursos visuais
   qr_flutter: ^4.1.0
   intl: ^0.19.0
   confetti: ^0.8.0
-
-  # ✨ FONTES MODERNAS
-  google_fonts: ^6.2.1
-
-  # 🛠️ Utilidades
-  meta: ^1.11.0
-
-dependency_overrides:
-  provider: 6.1.2
+  google_fonts: ^6.3.3
+  meta: ^1.17.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/images/
     - assets/sons/

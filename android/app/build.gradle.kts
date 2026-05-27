@@ -7,25 +7,26 @@ plugins {
 
 android {
     namespace = "com.example.matematicadivertida"
-    
-    // Atualizado conforme sugestão do terminal para suportar os plugins atuais
-    compileSdk = 36 
+
+    compileSdk = 36
     ndkVersion = "28.2.13676358"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 
     defaultConfig {
         applicationId = "com.example.matematicadivertida"
-        minSdk = 21
-        // Atualizado para coincidir com o compileSdk
-        targetSdk = 36 
+
+        minSdk = flutter.minSdkVersion
+
+        targetSdk = 36
+
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -43,6 +44,7 @@ android {
         getByName("debug") {
             signingConfig = signingConfigs.getByName("debug")
         }
+
         getByName("release") {
             signingConfig = signingConfigs.getByName("debug")
         }
