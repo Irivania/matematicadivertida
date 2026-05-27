@@ -26,6 +26,12 @@ class _JogoScreenState extends State<JogoScreen> {
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
   final _menuButtonFocusNode = FocusNode();
+  
+  // Variáveis para o Overlay de mensagem
+  bool _exibindoMensagem = false;
+  String _tituloMsg = "";
+  String _conteudoMsg = "";
+  bool _msgEhFimFase = false;
 
   @override
   void initState() {
@@ -53,6 +59,29 @@ class _JogoScreenState extends State<JogoScreen> {
 
   void _garantirFocoPergunta() => Future.microtask(() => _respostaFocusNode.requestFocus());
   void _garantirFocoMenu() => Future.microtask(() => _menuButtonFocusNode.requestFocus());
+
+  // Ajuste: Agora o método altera o estado da tela ao invés de abrir um Dialog
+  void _mostrarDialogo(bool isFimFase) {
+    setState(() {
+      _exibindoMensagem = true;
+      _msgEhFimFase = isFimFase;
+      _tituloMsg = isFimFase ? "🎉 Fase Concluída!" : "❌ Ops!";
+      _conteudoMsg = isFimFase ? "Preparando próxima fase... 🚀" : "Tente novamente!";
+    });
+    // Foca no botão do overlay
+    Future.microtask(() => _menuButtonFocusNode.requestFocus());
+  }
+
+  void _confirmarDialogo(bool isFimFase) {
+    setState(() => _exibindoMensagem = false);
+    if (isFimFase) {
+      context.read<GameState>().concluirEAvancarFase();
+      _flow.gerarPergunta();
+    } else {
+      _flow.retomarJogo();
+    }
+    _garantirFocoPergunta();
+  }
 
   void _iniciarJogo() {
     if (_flow.jogoAtivo) return;
@@ -82,55 +111,6 @@ class _JogoScreenState extends State<JogoScreen> {
     );
   }
 
-  void _mostrarDialogo(bool isFimFase) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Shortcuts(
-          shortcuts: {
-            LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-          },
-          child: Actions(
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (intent) {
-                  Navigator.of(dialogContext).pop();
-                  _confirmarDialogo(isFimFase);
-                  return null;
-                },
-              ),
-            },
-            child: AlertDialog(
-              title: Text(isFimFase ? "🎉 Fase Concluída!" : "❌ Ops!"),
-              content: Text(isFimFase ? "Preparando próxima fase... 🚀" : "Tente novamente!"),
-              actions: [
-                TextButton(
-                  autofocus: true,
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    _confirmarDialogo(isFimFase);
-                  },
-                  child: const Text("CONTINUAR"),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _confirmarDialogo(bool isFimFase) {
-    if (isFimFase) {
-      context.read<GameState>().concluirEAvancarFase();
-      _flow.gerarPergunta();
-    } else {
-      _flow.retomarJogo();
-    }
-    _garantirFocoPergunta();
-  }
-  
   void _exibirDica() {
     if (!_flow.jogoAtivo || _flow.perguntaAtual == null) return;
     showDialog(
@@ -146,19 +126,16 @@ class _JogoScreenState extends State<JogoScreen> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    if (!_flow.jogoAtivo && !_menuButtonFocusNode.hasFocus) _garantirFocoMenu();
+    if (!_flow.jogoAtivo && !_exibindoMensagem && !_menuButtonFocusNode.hasFocus) _garantirFocoMenu();
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/${widget.perfil}.png', 
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
+            child: Image.asset('assets/images/${widget.perfil}.png', fit: BoxFit.cover, alignment: Alignment.center),
           ),
+          
           SafeArea(
             child: Column(
               children: [
@@ -166,9 +143,7 @@ class _JogoScreenState extends State<JogoScreen> {
                   IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
                   IconButton(icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
                 ]),
-                
                 const SizedBox(height: 282),
-                
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(12),
@@ -177,14 +152,12 @@ class _JogoScreenState extends State<JogoScreen> {
                     children: [
                       HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
                       const Divider(color: Colors.white24, height: 20),
-                      Text("Pergunta ${gs.indicePerguntaAtual} de ${gs.maxPerguntasPorFase}", 
-                           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text("Pergunta ${gs.indicePerguntaAtual} de ${gs.maxPerguntasPorFase}", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
-
                 const Spacer(),
-                if (!_flow.jogoAtivo)
+                if (!_flow.jogoAtivo && !_exibindoMensagem)
                   Center(child: Column(children: [
                     if (gs.temPartidaSalva) _buildMenuButton("CONTINUAR", Colors.orange, _continuarPartida),
                     const SizedBox(height: 20),
@@ -200,7 +173,7 @@ class _JogoScreenState extends State<JogoScreen> {
                       child: _buildMenuButton(gs.temPartidaSalva ? "NOVO JOGO" : "COMEÇAR", Colors.green, _iniciarJogo),
                     ),
                   ]))
-                else
+                else if (_flow.jogoAtivo)
                   AreaPerguntaWidget(
                     key: ValueKey(_flow.perguntaAtual?.pergunta),
                     perguntaAtual: _flow.perguntaAtual,
@@ -214,28 +187,40 @@ class _JogoScreenState extends State<JogoScreen> {
               ],
             ),
           ),
-          
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.elasticOut,
-            bottom: !widget.isModoDisputa ? MediaQuery.of(context).size.height * 0.20 : 20.0,
-            right: 20,
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutBack,
-              scale: !widget.isModoDisputa ? 1.5 : 1.0,
-              child: GestureDetector(
-                onTap: _exibirDica,
-                behavior: HitTestBehavior.translucent,
-                child: Container(
-                  decoration: !widget.isModoDisputa ? BoxDecoration(
-                    boxShadow: [BoxShadow(color: Colors.yellow.withOpacity(0.4), blurRadius: 20, spreadRadius: 5)],
-                  ) : null,
-                  child: Image.asset('assets/images/mascote_cal.png', width: 100),
+
+          // Overlay de Mensagem (substitui o Dialog)
+          if (_exibindoMensagem)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black87,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(20)),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_tituloMsg, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 20),
+                      Text(_conteudoMsg, style: const TextStyle(color: Colors.white, fontSize: 18)),
+                      const SizedBox(height: 30),
+                      Focus(
+                        focusNode: _menuButtonFocusNode,
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+                            _confirmarDialogo(_msgEhFimFase);
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: ElevatedButton(
+                          onPressed: () => _confirmarDialogo(_msgEhFimFase),
+                          child: const Text("CONTINUAR", style: TextStyle(fontSize: 20)),
+                        ),
+                      ),
+                    ]),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
