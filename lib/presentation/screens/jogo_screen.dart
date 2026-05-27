@@ -9,7 +9,6 @@ import '../../../data/services/jogo_flow_service.dart';
 import '../../../data/services/jogo_voice_service.dart';
 import '../widgets/jogo/area_pergunta.dart';
 import '../widgets/jogo/hud_widget.dart';
-import '../widgets/jogo/progress_widget.dart';
 
 class JogoScreen extends StatefulWidget {
   final String perfil;
@@ -26,8 +25,6 @@ class _JogoScreenState extends State<JogoScreen> {
   late JogoVoiceService _voice;
   final _respostaController = TextEditingController();
   final _respostaFocusNode = FocusNode();
-  
-  // CORREÇÃO: Foco específico para o botão de menu
   final _menuButtonFocusNode = FocusNode();
 
   @override
@@ -50,22 +47,12 @@ class _JogoScreenState extends State<JogoScreen> {
     _voice.pararTudo();
     _respostaController.dispose();
     _respostaFocusNode.dispose();
-    _menuButtonFocusNode.dispose(); // CORREÇÃO
+    _menuButtonFocusNode.dispose();
     super.dispose();
   }
 
-  void _garantirFocoPergunta() {
-    Future.microtask(() {
-      if (_respostaFocusNode.canRequestFocus) _respostaFocusNode.requestFocus();
-    });
-  }
-  
-  // CORREÇÃO: Garante o foco no botão de menu ao abrir
-  void _garantirFocoMenu() {
-    Future.microtask(() {
-      if (_menuButtonFocusNode.canRequestFocus) _menuButtonFocusNode.requestFocus();
-    });
-  }
+  void _garantirFocoPergunta() => Future.microtask(() => _respostaFocusNode.requestFocus());
+  void _garantirFocoMenu() => Future.microtask(() => _menuButtonFocusNode.requestFocus());
 
   void _iniciarJogo() {
     if (_flow.jogoAtivo) return;
@@ -99,19 +86,38 @@ class _JogoScreenState extends State<JogoScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: Text(isFimFase ? "🎉 Fase Concluída!" : "❌ Ops!"),
-        content: Text(isFimFase ? "Preparando próxima fase... 🚀" : "Tente novamente!"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _confirmarDialogo(isFimFase);
+      builder: (BuildContext dialogContext) {
+        return Shortcuts(
+          shortcuts: {
+            LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+          },
+          child: Actions(
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (intent) {
+                  Navigator.of(dialogContext).pop();
+                  _confirmarDialogo(isFimFase);
+                  return null;
+                },
+              ),
             },
-            child: const Text("CONTINUAR"),
+            child: AlertDialog(
+              title: Text(isFimFase ? "🎉 Fase Concluída!" : "❌ Ops!"),
+              content: Text(isFimFase ? "Preparando próxima fase... 🚀" : "Tente novamente!"),
+              actions: [
+                TextButton(
+                  autofocus: true,
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _confirmarDialogo(isFimFase);
+                  },
+                  child: const Text("CONTINUAR"),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -140,19 +146,19 @@ class _JogoScreenState extends State<JogoScreen> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
-    
-    // CORREÇÃO: Garante o foco ao abrir a tela no menu
-    if (!_flow.jogoAtivo && !_menuButtonFocusNode.hasFocus) {
-       _garantirFocoMenu();
-    }
+    if (!_flow.jogoAtivo && !_menuButtonFocusNode.hasFocus) _garantirFocoMenu();
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Positioned.fill(child: Image.asset('assets/images/${widget.perfil}.png', fit: BoxFit.cover)),
-          
-          // CONTEÚDO PRINCIPAL (SafeArea)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/${widget.perfil}.png', 
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
           SafeArea(
             child: Column(
               children: [
@@ -160,32 +166,40 @@ class _JogoScreenState extends State<JogoScreen> {
                   IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
                   IconButton(icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
                 ]),
-                const SizedBox(height: 245),
-                HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
-                ProgressWidget(perguntaAtual: gs.indicePerguntaAtual, totalPerguntas: gs.maxPerguntasPorFase, disputaAtiva: _flow.disputaAtiva),
+                
+                const SizedBox(height: 282),
+                
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                  child: Column(
+                    children: [
+                      HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
+                      const Divider(color: Colors.white24, height: 20),
+                      Text("Pergunta ${gs.indicePerguntaAtual} de ${gs.maxPerguntasPorFase}", 
+                           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+
                 const Spacer(),
                 if (!_flow.jogoAtivo)
-                  Center(
-                    child: Column(
-                      children: [
-                        if (gs.temPartidaSalva) _buildMenuButton("CONTINUAR", Colors.orange, _continuarPartida),
-                        const SizedBox(height: 20),
-                        
-                        // CORREÇÃO DEFINTIVA DE FOCO NO ENTER
-                        Focus(
-                          focusNode: _menuButtonFocusNode, // Usa o FocusNode específico
-                          onKey: (node, event) {
-                            if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-                              _iniciarJogo();
-                              return KeyEventResult.handled;
-                            }
-                            return KeyEventResult.ignored;
-                          },
-                          child: _buildMenuButton(gs.temPartidaSalva ? "NOVO JOGO" : "COMEÇAR", Colors.green, _iniciarJogo),
-                        ),
-                      ],
+                  Center(child: Column(children: [
+                    if (gs.temPartidaSalva) _buildMenuButton("CONTINUAR", Colors.orange, _continuarPartida),
+                    const SizedBox(height: 20),
+                    Focus(
+                      focusNode: _menuButtonFocusNode,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
+                          _iniciarJogo();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: _buildMenuButton(gs.temPartidaSalva ? "NOVO JOGO" : "COMEÇAR", Colors.green, _iniciarJogo),
                     ),
-                  )
+                  ]))
                 else
                   AreaPerguntaWidget(
                     key: ValueKey(_flow.perguntaAtual?.pergunta),
@@ -201,14 +215,25 @@ class _JogoScreenState extends State<JogoScreen> {
             ),
           ),
           
-          // MASCOTE CAL: Fixado no Stack, fora do SafeArea, com GestureDetector Translucid
-          Positioned(
-            bottom: 20, 
-            right: 20, 
-            child: GestureDetector(
-              onTap: _exibirDica,
-              behavior: HitTestBehavior.translucent, // CORREÇÃO DE TOQUE
-              child: Image.asset('assets/images/mascote_cal.png', width: 100),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            bottom: !widget.isModoDisputa ? MediaQuery.of(context).size.height * 0.20 : 20.0,
+            right: 20,
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutBack,
+              scale: !widget.isModoDisputa ? 1.5 : 1.0,
+              child: GestureDetector(
+                onTap: _exibirDica,
+                behavior: HitTestBehavior.translucent,
+                child: Container(
+                  decoration: !widget.isModoDisputa ? BoxDecoration(
+                    boxShadow: [BoxShadow(color: Colors.yellow.withOpacity(0.4), blurRadius: 20, spreadRadius: 5)],
+                  ) : null,
+                  child: Image.asset('assets/images/mascote_cal.png', width: 100),
+                ),
+              ),
             ),
           ),
         ],
@@ -216,11 +241,9 @@ class _JogoScreenState extends State<JogoScreen> {
     );
   }
 
-  Widget _buildMenuButton(String text, Color color, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-      child: Text(text, style: const TextStyle(fontSize: 28, color: Colors.white)),
-    );
-  }
+  Widget _buildMenuButton(String text, Color color, VoidCallback onPressed) => ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+    child: Text(text, style: const TextStyle(fontSize: 28, color: Colors.white)),
+  );
 }

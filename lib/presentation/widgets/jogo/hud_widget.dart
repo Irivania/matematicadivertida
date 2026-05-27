@@ -5,7 +5,7 @@ import '../../../data/models/game_state.dart';
 class HUDWidget extends StatelessWidget {
   final GameState state;
   final bool isDisputa;
-  final int tempoRestante; // Aqui chegará o tempo crescente (treino) ou decrescente (disputa)
+  final int tempoRestante; 
 
   const HUDWidget({
     super.key, 
@@ -18,7 +18,7 @@ class HUDWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
       decoration: BoxDecoration(
         color: isDisputa ? Colors.black.withOpacity(0.7) : Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(15),
@@ -29,10 +29,8 @@ class HUDWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildItemFase(),
-          _buildItem(Icons.help_outline, "QST", "${state.indicePerguntaAtual}/${state.maxPerguntasPorFase}"),
           
-          // Lógica de tempo ajustada:
-          // Se disputa, mostra decrescente (ex: 59s). Se treino, mostra crescente (ex: 01:20).
+          // Tempo
           _buildItem(
             Icons.timer, 
             "TIME", 
@@ -40,6 +38,7 @@ class HUDWidget extends StatelessWidget {
             destaque: true
           ),
           
+          // XP
           _buildItem(Icons.star, "XP", "${state.pontos}"),
         ],
       ),
@@ -48,6 +47,7 @@ class HUDWidget extends StatelessWidget {
 
   Widget _buildItemFase() {
     final Color cor = isDisputa ? Colors.white : Colors.black87;
+    // Ajuste para pegar a cor do nivel de forma segura
     final nivel = state.nivelAtual;
     return Row(
       children: [
@@ -56,7 +56,7 @@ class HUDWidget extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("${state.fase}/10", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: cor)),
+            Text("${state.fase}", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: cor)),
             Text(nivel.label.toUpperCase(), style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey)),
           ],
         ),
