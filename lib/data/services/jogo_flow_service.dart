@@ -20,8 +20,9 @@ class JogoFlowService {
   Pergunta? perguntaAtual;
   Timer? timer;
   bool jogoAtivo = false;
-  int tempoRestante = 60; // Inicia em 60 para disputa
-  int tempoTreino = 0;    // Inicia em 0 para treino
+
+  int tempoRestante = 0; 
+  int tempoTreino = 0;    
   String ultimaPergunta = "";
 
   JogoFlowService({
@@ -39,15 +40,15 @@ class JogoFlowService {
     if (jogoAtivo) return;
 
     final gameState = context.read<GameState>();
-    if (gameState.fase == 1 && disputaAtiva) {
+    
+    if (gameState.fase == 1) {
       gameState.resetTempoAcumulado();
     }
 
     gameState.resetFase();
     jogoAtivo = true;
     
-    // Inicialização baseada no modo
-    tempoRestante = disputaAtiva ? 60 : 0;
+    tempoRestante = 0;
     tempoTreino = 0;
 
     ultimaPergunta = "";
@@ -63,15 +64,11 @@ class JogoFlowService {
       if (!jogoAtivo) return;
 
       if (disputaAtiva) {
-        if (tempoRestante <= 0) {
-          finalizarJogo(onTempoEsgotado);
-          return;
-        }
-        tempoRestante--;
+        tempoRestante++;
       } else {
         tempoTreino++;
       }
-      // Sempre incrementa no estado para persistência
+
       context.read<GameState>().incrementarTempoGeral();
       atualizarTela();
     });
@@ -81,32 +78,31 @@ class JogoFlowService {
     if (jogoAtivo) return;
     
     final gameState = context.read<GameState>();
-    
-    // Recupera o tempo já acumulado do estado salvo
     int tempoSalvo = gameState.tempoAcumuladoNivel;
     
     if (disputaAtiva) {
-      tempoRestante = (60 - tempoSalvo).clamp(0, 60);
+      tempoRestante = tempoSalvo;
     } else {
       tempoTreino = tempoSalvo;
     }
 
     jogoAtivo = true;
     if (perguntaAtual == null) gerarPergunta();
-    iniciarCronometro(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
+    iniciarCronometro(onTempoEsgotado: () => debugPrint("Fim de tempo não aplicável"));
     atualizarTela();
   }
 
   void processarAcerto({required VoidCallback onConcluirFase}) {
     final gameState = context.read<GameState>();
+    
     gameState.registrarAcerto(
       tempoRestante: disputaAtiva ? tempoRestante : tempoTreino, 
       ehModoDisputa: disputaAtiva
     );
+    
     HapticFeedback.mediumImpact();
 
     if (gameState.indicePerguntaAtual >= gameState.maxPerguntasPorFase) {
-      // Fase concluída, mas o jogo continua ativo para o cronômetro não resetar
       onConcluirFase();
     } else {
       gameState.avancarPergunta();
@@ -115,7 +111,33 @@ class JogoFlowService {
     }
   }
 
-  // --- MÉTODOS AUXILIARES ---
+  // --- MÉTODOS DE CONTROLE DE TEMPO ---
+  
+  void pausarDefinitivo() {
+    jogoAtivo = false;
+    cancelarTimer();
+    atualizarTela();
+  }
+
+  void pausarJogo() {
+    jogoAtivo = false;
+    cancelarTimer();
+    atualizarTela();
+  }
+  
+  void retomarJogo() {
+    if (jogoAtivo) return;
+    jogoAtivo = true;
+    iniciarCronometro(onTempoEsgotado: () => debugPrint("Retomando..."));
+    atualizarTela();
+  }
+
+  void cancelarTimer() {
+    timer?.cancel();
+    timer = null;
+  }
+
+  // --- AUXILIARES ---
   void gerarPergunta() {
     try {
       final gameState = context.read<GameState>();
@@ -146,25 +168,6 @@ class JogoFlowService {
     cancelarTimer();
     jogoAtivo = false;
     atualizarTela();
-    onTempoEsgotado();
-  }
-
-  void pausarJogo() {
-    jogoAtivo = false;
-    cancelarTimer();
-    atualizarTela();
-  }
-  
-  void retomarJogo() {
-    if (jogoAtivo) return;
-    jogoAtivo = true;
-    iniciarCronometro(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
-    atualizarTela();
-  }
-
-  void cancelarTimer() {
-    timer?.cancel();
-    timer = null;
   }
 
   void dispose() => cancelarTimer();

@@ -16,9 +16,10 @@ class GameState extends ChangeNotifier {
   int _tempoAcumuladoDoNivelAtual = 0;
   bool _temPartidaSalva = false;
   
+  Map<String, int> _melhoresTempos = {};
   Map<String, int> _xpPorPerfil = {'crianca': 0, 'adulto': 0, 'professor': 0};
   int progressoMissaoDiaria = 0;
-  final int metaMissaoDiaria = 10;
+  final int metaMissaoDiaria = 10; // RESTAURADO
   bool acessibilidadeVoz = false;
 
   GameState() { _carregarEstadoInicial(); }
@@ -27,10 +28,89 @@ class GameState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     progressoMissaoDiaria = prefs.getInt('progresso_missao') ?? 0;
     _temPartidaSalva = prefs.getBool('tem_partida_salva') ?? false;
+    for (var nivel in Nivel.values) {
+      _melhoresTempos[nivel.name] = prefs.getInt('recorde_${nivel.name}') ?? 0;
+    }
     notifyListeners();
   }
 
-  // --- PERSISTÊNCIA ---
+  // --- GETTERS E MÉTODOS REQUISITADOS ---
+  bool get temPartidaSalva => _temPartidaSalva;
+  int get pontos => _xpPorPerfil[perfil.toLowerCase()] ?? 0;
+  int get xpTotal => pontos;
+  int get fase => faseAtual;
+  int get indicePerguntaAtual => perguntaAtual;
+  int get maxPerguntasPorFase => EstruturaProgresso.perguntasPorFase;
+  int get tempoAcumuladoNivel => _tempoAcumuladoDoNivelAtual;
+  String get nivelParaService => nivelAtual.name;
+  String get nomeNivelExibicao => nivelAtual.name.toUpperCase();
+  bool get acessibilidadeAtiva => acessibilidadeVoz;
+  Map<String, int> get recordesPorNivel => _melhoresTempos;
+  Map<String, String> get nomesRecordesPorNivel => {};
+
+  String formatarMinutos(int s) => "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
+  String normalizarRespostaFalada(String texto) => texto.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
+  String obterDataDoRecorde(String nivel) => "--/--/----";
+
+  void definirPerfil(String novoPerfil) { perfil = novoPerfil.toLowerCase(); notifyListeners(); }
+  void carregarRecordesLocais() => notifyListeners();
+  void resetFase() { perguntaAtual = 1; notifyListeners(); }
+  void resetarPerguntaParaPrimeira() { perguntaAtual = 1; notifyListeners(); }
+  void resetarNivelParaInicioDoNivel() { faseAtual = 1; perguntaAtual = 1; _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
+  void resetTempoAcumulado() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); } // RESTAURADO
+  void zerarTempoAoPassarDeNivel() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
+  void alternarAcessibilidadeVoz() { acessibilidadeVoz = !acessibilidadeVoz; notifyListeners(); }
+  
+  bool comprarVidaExtra() {
+    if (pontos >= 500) {
+      _xpPorPerfil[perfil.toLowerCase()] = pontos - 500;
+      vidas++; notifyListeners(); return true;
+    }
+    return false;
+  }
+
+  // --- LÓGICA DE MEDALHAS E TEMPO ---
+  Future<void> salvarRecorde(String nivelNome, int tempo) async {
+    final prefs = await SharedPreferences.getInstance();
+    int recordeAtual = _melhoresTempos[nivelNome] ?? 0;
+    if (recordeAtual == 0 || tempo < recordeAtual) {
+      _melhoresTempos[nivelNome] = tempo;
+      await prefs.setInt('recorde_$nivelNome', tempo);
+      notifyListeners();
+    }
+  }
+
+  // CORRIGIDO: Agora recebe String, não int
+  String obterTipoMedalha(String nivelNome) {
+    int tempo = _melhoresTempos[nivelNome] ?? 0;
+    if (tempo == 0) return "";
+    if (tempo < 60) return "🥇 Ouro";
+    if (tempo < 120) return "🥈 Prata";
+    return "🥉 Bronze";
+  }
+
+  void concluirEAvancarFase() {
+    if (faseAtual < EstruturaProgresso.fasesPorNivel) faseAtual++;
+    else { 
+      salvarRecorde(nivelAtual.name, _tempoAcumuladoDoNivelAtual);
+      _subirNivel(); 
+      faseAtual = 1; 
+      zerarTempoAoPassarDeNivel(); 
+    }
+    perguntaAtual = 1;
+    limparProgresso();
+    notifyListeners();
+  }
+
+  void _subirNivel() {
+    nivelAtual = switch (nivelAtual) {
+      Nivel.bronze => Nivel.prata, Nivel.prata => Nivel.ouro,
+      Nivel.ouro => Nivel.platina, Nivel.platina => Nivel.mestre,
+      _ => Nivel.mestre,
+    };
+  }
+
+  // --- PERSISTÊNCIA GERAL ---
   Future<void> salvarProgressoCompleto() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('tem_partida_salva', true);
@@ -61,48 +141,6 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- GETTERS ---
-  bool get temPartidaSalva => _temPartidaSalva;
-  int get pontos => _xpPorPerfil[perfil.toLowerCase()] ?? 0;
-  int get xpTotal => pontos;
-  int get fase => faseAtual;
-  int get indicePerguntaAtual => perguntaAtual;
-  int get maxPerguntasPorFase => EstruturaProgresso.perguntasPorFase;
-  int get tempoAcumuladoNivel => _tempoAcumuladoDoNivelAtual;
-  String get nivelParaService => nivelAtual.name;
-  String get nomeNivelExibicao => nivelAtual.name.toUpperCase();
-  String get nomePerfil => perfil;
-  int get vidasRestantes => vidas;
-  bool get acessibilidadeAtiva => acessibilidadeVoz;
-
-  // --- MÉTODOS SOLICITADOS PELO COMPILADOR ---
-  String formatarMinutos(int s) => "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
-  
-  String normalizarRespostaFalada(String texto) => texto.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
-  
-  void definirPerfil(String novoPerfil) { 
-    perfil = novoPerfil.toLowerCase(); 
-    notifyListeners(); 
-  }
-
-  bool comprarVidaExtra() {
-    if (pontos >= 500) {
-      _xpPorPerfil[perfil.toLowerCase()] = pontos - 500;
-      vidas++; 
-      notifyListeners();
-      return true;
-    }
-    return false;
-  }
-
-  // --- MOCKS PARA COMPATIBILIDADE ---
-  void carregarRecordesLocais() => notifyListeners();
-  Map<String, int> get recordesPorNivel => {};
-  Map<String, String> get nomesRecordesPorNivel => {};
-  String obterDataDoRecorde(String nivel) => "--/--/----";
-  String obterTipoMedalha(int tempo) => "🥉 Bronze";
-
-  // --- AÇÕES DO JOGO ---
   void registrarAcerto({int tempoRestante = 0, bool ehModoDisputa = false}) {
     int mult = ehModoDisputa ? 2 : 1;
     int pontosGanhos = _calcularPontuacao.executar(acertos: 1, dificuldade: dificuldadeTecnica, tempoRestante: tempoRestante) * mult;
@@ -127,31 +165,11 @@ class GameState extends ChangeNotifier {
     } 
   }
 
-  void concluirEAvancarFase() {
-    if (faseAtual < EstruturaProgresso.fasesPorNivel) faseAtual++;
-    else { _subirNivel(); faseAtual = 1; _tempoAcumuladoDoNivelAtual = 0; }
-    perguntaAtual = 1;
-    limparProgresso();
-    notifyListeners();
-  }
-
-  void _subirNivel() {
-    nivelAtual = switch (nivelAtual) {
-      Nivel.bronze => Nivel.prata, Nivel.prata => Nivel.ouro,
-      Nivel.ouro => Nivel.platina, Nivel.platina => Nivel.mestre,
-      _ => Nivel.mestre,
-    };
-  }
-
   Dificuldade get dificuldadeTecnica => switch(nivelAtual) {
     Nivel.bronze => Dificuldade.facil,
     Nivel.prata => Dificuldade.medio,
     _ => Dificuldade.dificil,
   };
 
-  void incrementarTempoGeral() { _tempoAcumuladoDoNivelAtual++; salvarProgressoCompleto(); notifyListeners(); }
-  void resetFase() { perguntaAtual = 1; notifyListeners(); }
-  void resetTempoAcumulado() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
-  void resetarNivelParaInicio() { faseAtual = 1; perguntaAtual = 1; vidas = 3; _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
-  void alternarAcessibilidadeVoz() { acessibilidadeVoz = !acessibilidadeVoz; notifyListeners(); }
+  void incrementarTempoGeral() { _tempoAcumuladoDoNivelAtual++; notifyListeners(); }
 }

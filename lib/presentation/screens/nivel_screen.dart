@@ -1,15 +1,17 @@
+// lib/presentation/screens/nivel_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:matematicadivertida/presentation/routes/app_routes.dart';
 import 'package:matematicadivertida/core/enums/nivel_enum.dart';
 import 'package:matematicadivertida/core/enums/nivel_ext.dart';
 import 'package:matematicadivertida/core/theme/app_colors.dart';
+import 'package:matematicadivertida/data/models/game_state.dart';
 
 class NivelScreen extends StatelessWidget {
   const NivelScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Recebe o perfil com segurança (evita erro se vier nulo)
     final args = ModalRoute.of(context)!.settings.arguments;
     final String perfil = args is String ? args : "Convidado";
 
@@ -59,29 +61,19 @@ class NivelScreen extends StatelessWidget {
   }
 
   Widget _buildNivelCard(BuildContext context, Nivel nivel, String perfil) {
-    // Usamos as propriedades que criamos na NivelExt (nivel_ext.dart)
-    // Isso reduz o código aqui e centraliza a lógica no Enum
+    final gameState = context.watch<GameState>();
     final Color corNivel = nivel.cor;
     
-    // Ícones específicos para a progressão
-    IconData iconeNivel;
-    switch (nivel) {
-      case Nivel.bronze:
-        iconeNivel = Icons.bolt_outlined;
-        break;
-      case Nivel.prata:
-        iconeNivel = Icons.workspace_premium_outlined;
-        break;
-      case Nivel.ouro:
-        iconeNivel = Icons.whatshot_rounded;
-        break;
-      case Nivel.platina:
-        iconeNivel = Icons.diamond_outlined;
-        break;
-      case Nivel.mestre:
-        iconeNivel = Icons.auto_awesome;
-        break;
-    }
+    // CORRIGIDO: Passando 'nivel.name' (String) em vez de '0' (int)
+    final String medalha = gameState.obterTipoMedalha(nivel.name); 
+
+    IconData iconeNivel = switch (nivel) {
+      Nivel.bronze => Icons.bolt_outlined,
+      Nivel.prata => Icons.workspace_premium_outlined,
+      Nivel.ouro => Icons.whatshot_rounded,
+      Nivel.platina => Icons.diamond_outlined,
+      Nivel.mestre => Icons.auto_awesome,
+    };
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -92,7 +84,7 @@ class NivelScreen extends StatelessWidget {
             AppRoutes.jogo,
             arguments: {
               "perfil": perfil,
-              "nivel": nivel, // Passamos o Enum completo em vez de string
+              "nivel": nivel,
             },
           );
         },
@@ -100,19 +92,16 @@ class NivelScreen extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: corNivel.withValues(alpha: 0.3),
-              width: 1,
-            ),
+            border: Border.all(color: corNivel.withOpacity(0.3), width: 1),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: corNivel.withValues(alpha: 0.1),
+                  color: corNivel.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(iconeNivel, color: corNivel, size: 30),
@@ -122,14 +111,21 @@ class NivelScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      nivel.label.toUpperCase(),
-                      style: TextStyle(
-                        color: corNivel,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          nivel.label.toUpperCase(),
+                          style: TextStyle(
+                            color: corNivel,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (medalha.isNotEmpty)
+                          Text(medalha, style: const TextStyle(fontSize: 14, color: Colors.amber)),
+                      ],
                     ),
                     Text(
                       "Indicado para: ${nivel.serie}",

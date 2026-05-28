@@ -30,11 +30,11 @@ class HUDWidget extends StatelessWidget {
         children: [
           _buildItemFase(),
           
-          // Tempo
+          // Tempo: Agora usa formatarMinutos para ambos os modos
           _buildItem(
             Icons.timer, 
             "TIME", 
-            isDisputa ? "$tempoRestante s" : state.formatarMinutos(tempoRestante), 
+            state.formatarMinutos(tempoRestante), // Formato 00:00 padronizado
             destaque: true
           ),
           
@@ -47,7 +47,6 @@ class HUDWidget extends StatelessWidget {
 
   Widget _buildItemFase() {
     final Color cor = isDisputa ? Colors.white : Colors.black87;
-    // Ajuste para pegar a cor do nivel de forma segura
     final nivel = state.nivelAtual;
     return Row(
       children: [
