@@ -221,6 +221,40 @@ Home Screen
 
 ---
 
+## 📸 Capturas de Tela
+
+Para exibir imagens das telas do jogo no `README.md` siga estes passos:
+
+- Coloque os arquivos de imagem em `assets/images/screenshots/` (crie a pasta se necessário).
+- Use marcação Markdown para inserir as imagens:
+
+```markdown
+![Tela inicial](assets/images/screenshots/home.svg)
+![Tela do jogo](assets/images/screenshots/game.svg)
+```
+
+- Para controlar largura use HTML:
+
+```html
+<img src="assets/images/screenshots/game.svg" width="700" />
+```
+
+- Exemplos rápidos de captura:
+
+```bash
+# Capturar do dispositivo Android com adb
+adb exec-out screencap -p > assets/images/screenshots/game.png
+
+# Depois adicionar ao git e enviar
+git add assets/images/screenshots/*
+git commit -m "docs: add screenshots"
+git push
+```
+
+As imagens precisam estar no repositório (commit + push) para aparecerem no GitHub.
+
+---
+
 ## 📂 Estrutura do Projeto
 
 ```
