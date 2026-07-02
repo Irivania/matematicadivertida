@@ -223,20 +223,20 @@ Home Screen
 
 ## 📸 Capturas de Tela
 
-Para exibir imagens das telas do jogo no `README.md` siga estes passos:
+As capturas de tela do jogo estão em `assets/images/screenshots/`.
 
 - Coloque os arquivos de imagem em `assets/images/screenshots/` (crie a pasta se necessário).
 - Use marcação Markdown para inserir as imagens:
 
 ```markdown
-![Tela inicial](assets/images/screenshots/home.svg)
-![Tela do jogo](assets/images/screenshots/game.svg)
+![Tela de login](assets/images/screenshots/tela-login.png)
+![Tela inicial](assets/images/screenshots/tela-home.png)
 ```
 
 - Para controlar largura use HTML:
 
 ```html
-<img src="assets/images/screenshots/game.svg" width="700" />
+<img src="assets/images/screenshots/tela-jogo-adulto.png" width="700" />
 ```
 
 - Exemplos rápidos de captura:
@@ -250,6 +250,8 @@ git add assets/images/screenshots/*
 git commit -m "docs: add screenshots"
 git push
 ```
+
+> Dica: se quiser evitar espaços em nomes de arquivo, renomeie para `tela-login.png`, `tela-home.png`, `tela-jogo-adulto.png` etc.
 
 As imagens precisam estar no repositório (commit + push) para aparecerem no GitHub.
 
