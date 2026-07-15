@@ -4,6 +4,17 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+const _placeholder = 'REPLACE_WITH_YOUR_VALUE';
+
+const _firebaseProjectId = 'matematica-divertida-b285a';
+const _firebaseStorageBucket = 'matematica-divertida-b285a.firebasestorage.app';
+const _firebaseAuthDomain = 'matematica-divertida-b285a.firebaseapp.com';
+const _firebaseAndroidClientId = '5577210485-7a182kq109mmgbh16t5ou50hbehbqssi.apps.googleusercontent.com';
+const _firebaseIosClientId = '5577210485-oshms553jl24d7r5ftgersp3k9aiti30.apps.googleusercontent.com';
+const _firebaseAndroidApiKey = 'AIzaSyAs5vmQlPeB0lkjJMC3084Sm-YkgpH17rQ';
+const _firebaseAndroidAppId = '1:5577210485:android:0eadd0b190a031d01d963c';
+const _firebaseAndroidMessagingSenderId = '5577210485';
+
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
@@ -41,51 +52,51 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCz4iH5fKFHmeBHhaScAN9SlTRJNJZNxwk',
-    appId: '1:5577210485:web:1057995e19dc535b1d963c',
-    messagingSenderId: '5577210485',
-    projectId: 'matematica-divertida-b285a',
-    authDomain: 'matematica-divertida-b285a.firebaseapp.com',
-    storageBucket: 'matematica-divertida-b285a.firebasestorage.app',
+    apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY', defaultValue: _placeholder),
+    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID', defaultValue: _placeholder),
+    messagingSenderId: String.fromEnvironment('FIREBASE_WEB_MESSAGING_SENDER_ID', defaultValue: _placeholder),
+    projectId: String.fromEnvironment('FIREBASE_WEB_PROJECT_ID', defaultValue: _firebaseProjectId),
+    authDomain: String.fromEnvironment('FIREBASE_WEB_AUTH_DOMAIN', defaultValue: _firebaseAuthDomain),
+    storageBucket: String.fromEnvironment('FIREBASE_WEB_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAs5vmQlPeB0lkjJMC3084Sm-YkgpH17rQ',
-    appId: '1:5577210485:android:0eadd0b190a031d01d963c',
-    messagingSenderId: '5577210485',
-    projectId: 'matematica-divertida-b285a',
-    storageBucket: 'matematica-divertida-b285a.firebasestorage.app',
+    apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY', defaultValue: _firebaseAndroidApiKey),
+    appId: String.fromEnvironment('FIREBASE_ANDROID_APP_ID', defaultValue: _firebaseAndroidAppId),
+    messagingSenderId: String.fromEnvironment('FIREBASE_ANDROID_MESSAGING_SENDER_ID', defaultValue: _firebaseAndroidMessagingSenderId),
+    projectId: String.fromEnvironment('FIREBASE_ANDROID_PROJECT_ID', defaultValue: _firebaseProjectId),
+    storageBucket: String.fromEnvironment('FIREBASE_ANDROID_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCg20D8t4nMWoBenTAv7VfGepO1_3T9B3M',
-    appId: '1:5577210485:ios:553044ba6d4655dc1d963c',
-    messagingSenderId: '5577210485',
-    projectId: 'matematica-divertida-b285a',
-    storageBucket: 'matematica-divertida-b285a.firebasestorage.app',
-    androidClientId: '5577210485-7a182kq109mmgbh16t5ou50hbehbqssi.apps.googleusercontent.com',
-    iosClientId: '5577210485-oshms553jl24d7r5ftgersp3k9aiti30.apps.googleusercontent.com',
-    iosBundleId: 'com.example.matematicadivertida',
+    apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY', defaultValue: _placeholder),
+    appId: String.fromEnvironment('FIREBASE_IOS_APP_ID', defaultValue: _placeholder),
+    messagingSenderId: String.fromEnvironment('FIREBASE_IOS_MESSAGING_SENDER_ID', defaultValue: _placeholder),
+    projectId: String.fromEnvironment('FIREBASE_IOS_PROJECT_ID', defaultValue: _firebaseProjectId),
+    storageBucket: String.fromEnvironment('FIREBASE_IOS_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),
+    androidClientId: String.fromEnvironment('FIREBASE_IOS_ANDROID_CLIENT_ID', defaultValue: _firebaseAndroidClientId),
+    iosClientId: String.fromEnvironment('FIREBASE_IOS_IOS_CLIENT_ID', defaultValue: _firebaseIosClientId),
+    iosBundleId: String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID', defaultValue: 'com.example.matematicadivertida'),
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCg20D8t4nMWoBenTAv7VfGepO1_3T9B3M',
-    appId: '1:5577210485:ios:553044ba6d4655dc1d963c',
-    messagingSenderId: '5577210485',
-    projectId: 'matematica-divertida-b285a',
-    storageBucket: 'matematica-divertida-b285a.firebasestorage.app',
-    androidClientId: '5577210485-7a182kq109mmgbh16t5ou50hbehbqssi.apps.googleusercontent.com',
-    iosClientId: '5577210485-oshms553jl24d7r5ftgersp3k9aiti30.apps.googleusercontent.com',
-    iosBundleId: 'com.example.matematicadivertida',
+    apiKey: String.fromEnvironment('FIREBASE_MACOS_API_KEY', defaultValue: _placeholder),
+    appId: String.fromEnvironment('FIREBASE_MACOS_APP_ID', defaultValue: _placeholder),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MACOS_MESSAGING_SENDER_ID', defaultValue: _placeholder),
+    projectId: String.fromEnvironment('FIREBASE_MACOS_PROJECT_ID', defaultValue: _firebaseProjectId),
+    storageBucket: String.fromEnvironment('FIREBASE_MACOS_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),
+    androidClientId: String.fromEnvironment('FIREBASE_MACOS_ANDROID_CLIENT_ID', defaultValue: _firebaseAndroidClientId),
+    iosClientId: String.fromEnvironment('FIREBASE_MACOS_IOS_CLIENT_ID', defaultValue: _firebaseIosClientId),
+    iosBundleId: String.fromEnvironment('FIREBASE_MACOS_BUNDLE_ID', defaultValue: 'com.example.matematicadivertida'),
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCz4iH5fKFHmeBHhaScAN9SlTRJNJZNxwk',
-    appId: '1:5577210485:web:783168a65c3704b91d963c',
-    messagingSenderId: '5577210485',
-    projectId: 'matematica-divertida-b285a',
-    authDomain: 'matematica-divertida-b285a.firebaseapp.com',
-    storageBucket: 'matematica-divertida-b285a.firebasestorage.app',
+    apiKey: String.fromEnvironment('FIREBASE_WINDOWS_API_KEY', defaultValue: _placeholder),
+    appId: String.fromEnvironment('FIREBASE_WINDOWS_APP_ID', defaultValue: _placeholder),
+    messagingSenderId: String.fromEnvironment('FIREBASE_WINDOWS_MESSAGING_SENDER_ID', defaultValue: _placeholder),
+    projectId: String.fromEnvironment('FIREBASE_WINDOWS_PROJECT_ID', defaultValue: _firebaseProjectId),
+    authDomain: String.fromEnvironment('FIREBASE_WINDOWS_AUTH_DOMAIN', defaultValue: _firebaseAuthDomain),
+    storageBucket: String.fromEnvironment('FIREBASE_WINDOWS_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),
   );
 
 }

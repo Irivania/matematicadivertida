@@ -51,7 +51,12 @@ class AuthRepositoryImpl implements IAuthRepository {
       return _mapFirebaseUser(credential.user);
       
     } on FirebaseAuthException catch (e) {
-      throw AuthFailure("Erro Firebase: ${e.code}"); 
+      if (e.code == 'google-signin-token-error' || e.code == 'google-signin-error') {
+        throw AuthFailure(
+          'Não foi possível concluir o login com o Google. Verifique a configuração do Firebase e do Google Cloud Console.',
+        );
+      }
+      throw AuthFailure("Erro Firebase: ${e.code}");
     } catch (e) {
       debugPrint("Erro Crítico (signInWithGoogle): $e");
       throw AuthFailure("Erro inesperado ao autenticar com Google.");

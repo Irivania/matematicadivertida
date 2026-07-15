@@ -120,44 +120,47 @@ flutter pub get
 4. Ative o Google Analytics (opcional)
 5. Siga as instruções de setup
 
-#### Passo 2: Conectar o Flutter
+#### Passo 2: Habilitar serviços essenciais
 
-```bash
-# Instalar CLI do Firebase
-npm install -g firebase-tools
+1. Ative o módulo de **Authentication**
+2. Habilite o login com **Google**
+3. Ative o **Firestore Database** e escolha uma região próxima
+4. Adicione os apps Android, iOS e Web ao projeto
 
-# Fazer login
-firebase login
+#### Passo 3: Configurar autenticação Google
 
-# Conectar projeto
-flutterfire configure
-```
-
-#### Passo 3: Configurar Autenticação Google
-
-1. No Firebase Console → Autenticação → Google
-2. Habilitar Google Sign-In
-3. No Google Cloud Console → OAuth consent screen
-4. Criar credentials de OAuth 2.0 para:
-   - **Android**: SHA-1 e SHA-256 do seu app
+1. No Google Cloud Console, configure o **OAuth consent screen**
+2. Crie credentials de OAuth 2.0 para:
+   - **Android**: SHA-1 e SHA-256 do app
    - **iOS**: Bundle ID
    - **Web**: URIs autorizados
 
-#### Passo 4: Criar Firestore
+#### Passo 4: Preparar os arquivos locais
 
-1. No Firebase Console → Firestore Database
-2. Escolher região mais próxima
-3. Iniciar em modo teste (depois mudar para produção)
-4. Criar coleções conforme necessário
+O projeto usa configuração local para Firebase e assinatura Android. Mantenha os arquivos sensíveis fora do repositório e use valores específicos de cada ambiente de desenvolvimento.
 
-### 4️⃣ Variáveis de Ambiente (Opcional)
+### 4️⃣ Configuração Local Segura
 
-Crie um arquivo `.env` na raiz:
+O projeto agora usa configuração local para Firebase e assinatura Android, sem armazenar segredos diretamente no repositório.
 
-```env
-FIREBASE_PROJECT_ID=seu-project-id
-FIREBASE_REGION=us-central1
+#### Firebase
+Para rodar localmente, defina os valores em tempo de build com `--dart-define`:
+
+```bash
+flutter run \
+  --dart-define=FIREBASE_ANDROID_API_KEY=seu_valor \
+  --dart-define=FIREBASE_ANDROID_APP_ID=seu_valor \
+  --dart-define=FIREBASE_ANDROID_MESSAGING_SENDER_ID=seu_valor \
+  --dart-define=FIREBASE_ANDROID_PROJECT_ID=seu_project_id \
+  --dart-define=FIREBASE_ANDROID_STORAGE_BUCKET=seu_bucket
 ```
+
+Para iOS, macOS e Web, use os equivalentes `FIREBASE_IOS_*`, `FIREBASE_MACOS_*` e `FIREBASE_WEB_*`.
+
+#### Assinatura Android
+Crie um arquivo [android/key.properties](android/key.properties) com base no modelo [android/key.properties.example](android/key.properties.example), informando `storePassword`, `keyAlias` e `keyPassword`.
+
+> Não versione [android/key.properties](android/key.properties), [android/app/google-services.json](android/app/google-services.json) ou outros arquivos com segredos. Consulte [README_security.md](README_security.md) para detalhes adicionais.
 
 ### 5️⃣ Executar o App
 

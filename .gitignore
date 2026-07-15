@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets and Firebase config
+# Keep local credentials and environment-specific files out of version control.
+.env
+.env.*
+*.local
+android/key.properties
+android/app/google-services.json
+android/app/src/main/res/values/google-services.xml
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+web/firebase-config.js

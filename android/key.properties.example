@@ -1,0 +1,4 @@
+storeFile=../keystore/release.keystore
+storePassword=REPLACE_WITH_YOUR_STORE_PASSWORD
+keyAlias=REPLACE_WITH_YOUR_KEY_ALIAS
+keyPassword=REPLACE_WITH_YOUR_KEY_PASSWORD

@@ -2,8 +2,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
+  static const String _defaultGoogleServerClientId =
+      '5577210485-0ul1lhb99g08rsq15kk0v4r6uf54vkg8.apps.googleusercontent.com';
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: <String>['email', 'profile'],
+    serverClientId: const String.fromEnvironment(
+      'GOOGLE_SERVER_CLIENT_ID',
+      defaultValue: _defaultGoogleServerClientId,
+    ),
+  );
 
   // Expõe o fluxo do estado de autenticação em tempo real
   Stream<User?> get usuarioStatus => _auth.authStateChanges();
@@ -37,16 +46,36 @@ class AuthService {
 
   // Autenticação rápida com o Google Sign-In
   Future<UserCredential?> entrarComGoogle() async {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null;
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    final OAuthCredential credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
 
-    return await _auth.signInWithCredential(credential);
+      if (idToken == null || accessToken == null) {
+        throw FirebaseAuthException(
+          code: 'google-signin-token-error',
+          message:
+              'Não foi possível obter os tokens do Google. Verifique a configuração do Firebase e do Google Sign-In.',
+        );
+      }
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: accessToken,
+        idToken: idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw FirebaseAuthException(
+        code: 'google-signin-error',
+        message: 'Falha ao iniciar o login com Google: $e',
+      );
+    }
   }
 
   // Atualização cadastral básica do Firebase Auth
