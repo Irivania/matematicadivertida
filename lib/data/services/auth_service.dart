@@ -1,114 +1,72 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
-  static const String _defaultGoogleServerClientId =
-      '5577210485-0ul1lhb99g08rsq15kk0v4r6uf54vkg8.apps.googleusercontent.com';
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _googleSignInInitialized = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: <String>['email', 'profile'],
-    serverClientId: const String.fromEnvironment(
-      'GOOGLE_SERVER_CLIENT_ID',
-      defaultValue: _defaultGoogleServerClientId,
-    ),
-  );
 
-  // Expõe o fluxo do estado de autenticação em tempo real
   Stream<User?> get usuarioStatus => _auth.authStateChanges();
-
-  // Retorna o usuário atual logado no Firebase
   User? get usuarioAtual => _auth.currentUser;
 
-  // Entrada em modo anônimo (Convidado)
-  Future<User?> entrarAnonimamente() async {
-    final userCredential = await _auth.signInAnonymously();
-    return userCredential.user;
-  }
+  Future<User?> entrarAnonimamente() async => (await _auth.signInAnonymously()).user;
 
-  // Login com e-mail e senha tradicional
-  Future<User?> entrarComEmailESenha(String email, String senha) async {
-    final userCredential = await _auth.signInWithEmailAndPassword(
-      email: email, 
-      password: senha,
-    );
-    return userCredential.user;
-  }
+  Future<User?> entrarComEmailESenha(String email, String senha) async =>
+      (await _auth.signInWithEmailAndPassword(email: email, password: senha)).user;
 
-  // Cadastro de novas credenciais
   Future<User?> cadastrarComEmailESenha(String email, String senha) async {
-    final userCredential = await _auth.createUserWithEmailAndPassword(
-      email: email, 
-      password: senha,
-    );
-    return userCredential.user;
+    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: senha);
+    await cred.user?.updateDisplayName(null);
+    return cred.user;
   }
 
-  // Autenticação rápida com o Google Sign-In
+  Future<void> _garantirInicializacaoGoogle() async {
+    if (_googleSignInInitialized) return;
+
+    await _googleSignIn.initialize();
+    _googleSignInInitialized = true;
+  }
+
   Future<UserCredential?> entrarComGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
-      final String? accessToken = googleAuth.accessToken;
-
-      if (idToken == null || accessToken == null) {
-        throw FirebaseAuthException(
-          code: 'google-signin-token-error',
-          message:
-              'Não foi possível obter os tokens do Google. Verifique a configuração do Firebase e do Google Sign-In.',
-        );
+      if (kIsWeb) {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        return await _auth.signInWithPopup(googleProvider);
       }
 
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: accessToken,
-        idToken: idToken,
+      await _garantirInicializacaoGoogle();
+
+      final GoogleSignInAccount account = await _googleSignIn.authenticate();
+      final GoogleSignInAuthentication auth = await account.authentication;
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        idToken: auth.idToken,
       );
 
       return await _auth.signInWithCredential(credential);
-    } on FirebaseAuthException {
-      rethrow;
     } catch (e) {
-      throw FirebaseAuthException(
-        code: 'google-signin-error',
-        message: 'Falha ao iniciar o login com Google: $e',
-      );
+      debugPrint("Erro no Google Sign-In: $e");
+      return null;
     }
   }
 
-  // Atualização cadastral básica do Firebase Auth
   Future<void> atualizarDadosBasicos({String? displayName, String? photoURL}) async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      if (displayName != null) await user.updateDisplayName(displayName);
-      if (photoURL != null) await user.updatePhotoURL(photoURL);
-    }
+    await _auth.currentUser?.updateDisplayName(displayName);
+    await _auth.currentUser?.updatePhotoURL(photoURL);
   }
 
-  // Espaço reservado para atualizar perfis extras (ex: Aluno/Professor)
-  Future<void> atualizarPerfilUsuario(String perfil) async {
-    // Caso pretenda persistir o perfil pedagógico diretamente no Firestore futuramente,
-    // a chamada ou injeção do serviço do banco de dados entrará aqui.
+  Future<void> atualizarPerfilUsuario(String perfil) async {}
+  
+  Future<void> enviarEmailRecuperacao(String email) async => await _auth.sendPasswordResetEmail(email: email);
+  
+  Future<void> sair() async { 
+    await _googleSignIn.signOut(); 
+    await _auth.signOut(); 
   }
 
-  // Disparo de e-mail para redefinição de credenciais
-  Future<void> enviarEmailRecuperacao(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
-  }
-
-  // Encerramento completo de sessões ativas
-  Future<void> sair() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
-  }
-
-  // Exclusão definitiva de conta do usuário
-  Future<void> excluirConta() async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      await user.delete();
-    }
-  }
+  Future<void> excluirConta() async => await _auth.currentUser?.delete();
 }

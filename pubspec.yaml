@@ -21,15 +21,15 @@ dependencies:
   shared_preferences: ^2.5.5
 
   # Firebase atualizado para versões estáveis
-  firebase_core: ^3.0.0
-  firebase_auth: ^5.0.0
-  cloud_firestore: ^5.0.0
-  google_sign_in: ^6.2.1
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  cloud_firestore: ^6.7.1
+  google_sign_in: ^7.2.0
 
   qr_flutter: ^4.1.0
-  intl: ^0.19.0
+  intl: ^0.20.3
   confetti: ^0.8.0
-  google_fonts: ^6.3.3
+  google_fonts: ^8.2.0
   meta: ^1.17.0
 
 dev_dependencies:

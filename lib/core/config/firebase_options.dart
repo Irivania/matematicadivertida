@@ -52,9 +52,9 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY', defaultValue: _placeholder),
-    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID', defaultValue: _placeholder),
-    messagingSenderId: String.fromEnvironment('FIREBASE_WEB_MESSAGING_SENDER_ID', defaultValue: _placeholder),
+    apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY', defaultValue: 'AIzaSyCz4iH5fKFHmeBHhaScAN9SlTRJNJZNxwk'),
+    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID', defaultValue: '1:5577210485:web:1057995e19dc535b1d963c'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_WEB_MESSAGING_SENDER_ID', defaultValue: '5577210485'),
     projectId: String.fromEnvironment('FIREBASE_WEB_PROJECT_ID', defaultValue: _firebaseProjectId),
     authDomain: String.fromEnvironment('FIREBASE_WEB_AUTH_DOMAIN', defaultValue: _firebaseAuthDomain),
     storageBucket: String.fromEnvironment('FIREBASE_WEB_STORAGE_BUCKET', defaultValue: _firebaseStorageBucket),

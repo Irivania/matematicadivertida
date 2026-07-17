@@ -13,12 +13,13 @@ abstract class AuthRemoteDataSource {
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final FirebaseAuth _auth;
   final GoogleSignIn _googleSignIn;
+  bool _googleSignInInitialized = false;
 
   AuthRemoteDataSourceImpl({
     FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   @override
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -33,14 +34,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return await _auth.createUserWithEmailAndPassword(email: email, password: password);
   }
 
+  Future<void> _garantirInicializacaoGoogle() async {
+    if (_googleSignInInitialized) return;
+
+    await _googleSignIn.initialize();
+    _googleSignInInitialized = true;
+  }
+
   @override
   Future<UserCredential?> loginWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null;
+    if (kIsWeb) {
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      return await _auth.signInWithPopup(googleProvider);
+    }
 
+    await _garantirInicializacaoGoogle();
+
+    final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     final AuthCredential credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
     return await _auth.signInWithCredential(credential);
