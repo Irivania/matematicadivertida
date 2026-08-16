@@ -48,7 +48,7 @@ void main() async {
         // 4. Estado Global do Jogo (Score, Nível, etc)
         ChangeNotifierProvider<GameState>(create: (_) => GameState()),
 
-        // 5. Controlador Unificado de Áudio/Voz (Gerencia TTS e Microfone)
+        // 5. Controlador Unificado do Jogo e Voz (TTS e Microfone)
         ChangeNotifierProvider<JogoController>(create: (_) => JogoController()),
       ],
       child: const MeuApp(),

@@ -21,6 +21,8 @@ class JogoController extends ChangeNotifier {
     try {
       await _flutterTts.setLanguage("pt-BR");
       await _flutterTts.setSpeechRate(0.55);
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.awaitSpeakCompletion(true);
       await _speech.initialize();
       
       _flutterTts.setCompletionHandler(() {
@@ -32,28 +34,58 @@ class JogoController extends ChangeNotifier {
 
   Future<void> falar(String pergunta) async {
     if (pergunta.trim().isEmpty) return;
-    // Se for a mesma pergunta exata e o motor já estiver processando, aborta a duplicação
+    
+    // Evita loop se for a mesma pergunta exata enquanto já fala
     if (pergunta == _ultimaPerguntaFalada && _estaFalandoAgora) return;
     
     _ultimaPerguntaFalada = pergunta;
     _estaFalandoAgora = true;
     
-    await _flutterTts.stop();
+    try {
+      await _flutterTts.stop();
+      if (kIsWeb) {
+        await Future.delayed(const Duration(milliseconds: 150));
+        await _flutterTts.setLanguage("pt-BR");
+      }
 
-    String textoParaFalar = pergunta
-        .replaceAll('+', ' mais ')
-        .replaceAll('-', ' menos ')
-        .replaceAll('x', ' vezes ')
-        .replaceAll('/', ' dividido por ');
+      // Remove palavras duplicadas como "quanto é" ou interrogações caso já venham na string
+      String perguntaLimpa = pergunta
+          .replaceAll(RegExp(r'(quanto é|quanto e|\?)', caseSensitive: false), '')
+          .trim();
 
-    await _flutterTts.speak("Quanto é $textoParaFalar ?");
+      String textoParaFalar = perguntaLimpa
+          .replaceAll('+', ' mais ')
+          .replaceAll('-', ' menos ')
+          .replaceAll('x', ' vezes ')
+          .replaceAll('/', ' dividido por ');
+
+      await _flutterTts.speak("Quanto é $textoParaFalar ?");
+    } catch (e) {
+      _estaFalandoAgora = false;
+      print("Erro no TTS: $e");
+    }
   }
 
-  /// Comunica por voz se o jogador errou ou esgotou o tempo
+  /// Reseta a trava e força a fala da nova pergunta
+  void prepararProximaPergunta(String novaPergunta) {
+    if (_ultimaPerguntaFalada != novaPergunta) {
+      _ultimaPerguntaFalada = ""; 
+      falar(novaPergunta);
+    } else {
+      // Caso seja a mesma string por algum motivo, força a releitura limpando a trava
+      _ultimaPerguntaFalada = "";
+      falar(novaPergunta);
+    }
+  }
+
   Future<void> falarFeedbackSistema(String mensagem) async {
+    if (mensagem.trim().isEmpty) return;
     _estaFalandoAgora = true;
-    await _flutterTts.stop();
-    await _flutterTts.speak(mensagem);
+    try {
+      await _flutterTts.stop();
+      await Future.delayed(const Duration(milliseconds: 100));
+      await _flutterTts.speak(mensagem);
+    } catch (_) {}
   }
 
   Future<void> alternarMicrofone({

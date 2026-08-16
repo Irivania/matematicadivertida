@@ -1,6 +1,5 @@
 // lib/presentation/widgets/jogo/area_pergunta.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../data/models/pergunta.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -45,11 +44,11 @@ class AreaPerguntaWidget extends StatelessWidget {
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            autofocus: true, // <--- GARANTE QUE O TECLADO ABRA SOZINHO
+            autofocus: true,
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.send,
-            onSubmitted: (_) => onValidar(), // Enter envia a resposta
+            onSubmitted: (_) => onValidar(),
             style: TextStyle(
               color: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
               fontSize: 32,

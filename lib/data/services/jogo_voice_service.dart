@@ -1,37 +1,29 @@
+// lib/data/services/jogo_voice_service.dart
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../models/game_state.dart';
-// Ajuste o caminho abaixo conforme a localização real do seu Controller
 import '../../presentation/controllers/jogo_controller.dart';
 
 class JogoVoiceService {
-  final BuildContext context;
-
-  JogoVoiceService({
-    required this.context,
-  });
+  JogoVoiceService();
 
   // =========================
   // LER PERGUNTA
   // =========================
   Future<void> iniciarLeituraPergunta({
+    required JogoController jogoController,
+    required GameState gameState,
     required String pergunta,
     required bool jogoAtivo,
     required VoidCallback onAcionarMicrofone,
   }) async {
-    final controller = context.read<JogoController>();
+    jogoController.pararMicrofone();
 
-    // Garante que o microfone pare antes
-    controller.pararMicrofone();
+    // Usa a preparação inteligente para evitar duplicar ou travar na 5ª pergunta
+    jogoController.prepararProximaPergunta(pergunta);
 
-    await controller.falar(pergunta);
-
-    // Web não suporta bem speech_to_text
-    if (!kIsWeb &&
-        jogoAtivo &&
-        context.read<GameState>().acessibilidadeVoz) {
+    if (!kIsWeb && jogoAtivo && gameState.acessibilidadeVoz) {
       Future.delayed(
         const Duration(milliseconds: 1200),
         onAcionarMicrofone,
@@ -43,15 +35,15 @@ class JogoVoiceService {
   // MICROFONE
   // =========================
   void acionarMicrofone({
+    required JogoController jogoController,
+    required GameState gameState,
     required bool jogoAtivo,
     required Function(String texto) onTextoCapturado,
     required VoidCallback onFinalizado,
   }) {
     if (!jogoAtivo) return;
 
-    final gameState = context.read<GameState>();
-
-    context.read<JogoController>().alternarMicrofone(
+    jogoController.alternarMicrofone(
       onTextoCapturado: (textoReconhecido) {
         final textoNormalizado = gameState.normalizarRespostaFalada(
           textoReconhecido,
@@ -66,36 +58,33 @@ class JogoVoiceService {
   // =========================
   // FALAR FEEDBACK
   // =========================
-  Future<void> falarFeedback(String texto) async {
-    await context
-        .read<JogoController>()
-        .falarFeedbackSistema(texto);
+  Future<void> falarFeedback(JogoController jogoController, String texto) async {
+    await jogoController.falarFeedbackSistema(texto);
   }
 
   // =========================
   // PARAR TUDO
   // =========================
-  void pararTudo() {
-    final controller = context.read<JogoController>();
-    controller.pararMicrofone();
-    controller.pararTTS();
+  void pararTudo(JogoController jogoController) {
+    jogoController.pararMicrofone();
+    jogoController.pararTTS();
   }
 
   // =========================
   // ATIVAR/DESATIVAR ACESSIBILIDADE
   // =========================
   void alternarAcessibilidade({
+    required JogoController jogoController,
+    required GameState gameState,
     required bool jogoAtivo,
     required String? perguntaAtual,
     required VoidCallback onRelerPergunta,
   }) {
-    final gameState = context.read<GameState>();
-
     gameState.alternarAcessibilidadeVoz();
 
     // Ativou
     if (gameState.acessibilidadeVoz) {
-      context.read<JogoController>().resetarTrava();
+      jogoController.resetarTrava();
 
       if (jogoAtivo && perguntaAtual != null) {
         onRelerPergunta();
@@ -103,14 +92,7 @@ class JogoVoiceService {
     }
     // Desativou
     else {
-      pararTudo();
+      pararTudo(jogoController);
     }
-  }
-
-  // =========================
-  // STATUS MICROFONE
-  // =========================
-  bool get estaOuvindo {
-    return context.watch<JogoController>().estaOuvindoMicrofone;
   }
 }

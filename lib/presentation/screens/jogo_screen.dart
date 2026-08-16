@@ -7,8 +7,12 @@ import '../../../data/models/game_state.dart';
 import '../../../data/services/pergunta_service.dart';
 import '../../../data/services/jogo_flow_service.dart';
 import '../../../data/services/jogo_voice_service.dart';
+import '../controllers/jogo_controller.dart';
 import '../widgets/jogo/area_pergunta.dart';
-import '../widgets/jogo/hud_widget.dart';
+import '../widgets/jogo/cabecalho_jogo_widget.dart';
+import '../widgets/jogo/menu_inicial_widget.dart';
+import '../widgets/jogo/mensagem_dialog_widget.dart';
+import '../widgets/jogo/mascote_dica_widget.dart';
 import '../../../core/enums/nivel_enum.dart'; 
 
 class JogoScreen extends StatefulWidget {
@@ -44,50 +48,59 @@ class _JogoScreenState extends State<JogoScreen> {
       respostaController: _respostaController,
       atualizarTela: () => setState(() {}),
     );
-    _voice = JogoVoiceService(context: context);
+    _voice = JogoVoiceService();
   }
 
   @override
   void dispose() {
     _flow.dispose();
-    _voice.pararTudo();
+    try {
+      Provider.of<JogoController>(context, listen: false).pararMicrofone();
+      Provider.of<JogoController>(context, listen: false).pararTTS();
+    } catch (_) {}
+
     _respostaController.dispose();
     _respostaFocusNode.dispose();
     _menuButtonFocusNode.dispose();
     super.dispose();
   }
 
-  void _garantirFocoPergunta() => Future.microtask(() {
-    if (mounted) _respostaFocusNode.requestFocus();
-  });
+  void _garantirFocoPergunta() => Future.microtask(() { if (mounted) _respostaFocusNode.requestFocus(); });
+  void _garantirFocoMenu() => Future.microtask(() { if (mounted) _menuButtonFocusNode.requestFocus(); });
 
-  void _garantirFocoMenu() => Future.microtask(() {
-    if (mounted) _menuButtonFocusNode.requestFocus();
-  });
+  void _falarPerguntaAtualSeAtivo() {
+    if (_flow.perguntaAtual == null) return;
+    final gs = context.read<GameState>();
+    if (gs.acessibilidadeAtiva) {
+      _voice.iniciarLeituraPergunta(
+        jogoController: context.read<JogoController>(),
+        gameState: gs,
+        pergunta: _flow.perguntaAtual!.pergunta,
+        jogoAtivo: _flow.jogoAtivo,
+        onAcionarMicrofone: () {},
+      );
+    }
+  }
 
   void _mostrarDialogo(bool isFimFase) {
     if (!mounted) return;
     final gs = context.read<GameState>();
-    
-    // Pausa o fluxo para garantir que o tempo pare no final
     isFimFase ? _flow.pausarDefinitivo() : _flow.pausarJogo();
 
     final bool ehFimDeJogo = isFimFase && gs.nivelAtual == Nivel.mestre && gs.fase == 5; 
     final bool ehFimDeNivel = isFimFase && !ehFimDeJogo && gs.fase == 1; 
 
-    final msgFinal = {"tit": "Você é uma Lenda! 👑", "msg": "Você superou todos os desafios! Parabéns, Mestre Supremo!"};
-    final msgNivel = {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se, o próximo nível é mais desafiador!"};
-    final msgFase = {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"};
     final msgsErro = [
-      {"tit": "Quase lá! 🧐", "msg": "Essa foi difícil, mas você está aprendendo muito! Vamos recomeçar?"},
+      {"tit": "Quase lá! 🧐", "msg": "Essa foi difícil, mas você está aprendendo muito! Vamos tentar de novo?"},
       {"tit": "Não desista! 💪", "msg": "Grandes matemáticos erram. Respire fundo e vamos tentar de novo!"},
     ];
 
     final escolha = isFimFase 
-        ? (ehFimDeJogo ? msgFinal : (ehFimDeNivel ? msgNivel : msgFase))
+        ? (ehFimDeJogo ? {"tit": "Você é uma Lenda! 👑", "msg": "Você superou todos os desafios! Parabéns, Mestre Supremo!"} 
+                       : (ehFimDeNivel ? {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se para o próximo nível!"} 
+                                       : {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"}))
         : (msgsErro..shuffle()).first;
 
-    // Busca a medalha se for fim de nível
     String medalha = (isFimFase && !ehFimDeJogo) ? gs.obterTipoMedalha(gs.nivelAtual.name) : "";
 
     setState(() {
@@ -107,21 +120,22 @@ class _JogoScreenState extends State<JogoScreen> {
     } else {
       _flow.retomarJogo();
     }
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) _garantirFocoPergunta();
-    });
+    _falarPerguntaAtualSeAtivo();
+    Future.delayed(const Duration(milliseconds: 150), () => _garantirFocoPergunta());
   }
 
   void _iniciarJogo() {
     if (_flow.jogoAtivo) return;
     context.read<GameState>().limparProgresso();
     _flow.iniciarDesafio(onTempoEsgotado: () => debugPrint("Tempo esgotado!"));
+    _falarPerguntaAtualSeAtivo();
     _garantirFocoPergunta();
   }
 
   void _continuarPartida() {
     context.read<GameState>().carregarProgresso();
     _flow.continuarPartida();
+    _falarPerguntaAtualSeAtivo();
     _garantirFocoPergunta();
   }
 
@@ -132,6 +146,7 @@ class _JogoScreenState extends State<JogoScreen> {
         HapticFeedback.lightImpact();
         gs.registrarAcerto(tempoRestante: _flow.displayTempo, ehModoDisputa: widget.isModoDisputa);
         _flow.processarAcerto(onConcluirFase: () => _mostrarDialogo(true));
+        if (!_exibindoMensagem) _falarPerguntaAtualSeAtivo();
       },
       onErro: (correta) {
         HapticFeedback.heavyImpact();
@@ -164,10 +179,7 @@ class _JogoScreenState extends State<JogoScreen> {
                 }
                 return KeyEventResult.ignored;
               },
-              child: TextButton(
-                onPressed: () => Navigator.pop(context), 
-                child: const Text("Entendi!"),
-              ),
+              child: TextButton(onPressed: () => Navigator.pop(context), child: const Text("Entendi!")),
             ),
           ],
         );
@@ -188,49 +200,34 @@ class _JogoScreenState extends State<JogoScreen> {
           SafeArea(
             child: Column(
               children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
-                  IconButton(icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30), onPressed: () => gs.alternarAcessibilidadeVoz()),
-                ]),
-                const SizedBox(height: 250),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
-                          const SizedBox(width: 8),
-                          Text(gs.nomeNivelExibicao, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      HUDWidget(state: gs, isDisputa: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
-                      const Divider(color: Colors.white24, height: 20),
-                      Text("Pergunta ${gs.indicePerguntaAtual} de ${gs.maxPerguntasPorFase}", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
+                    IconButton(
+                      icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30),
+                      onPressed: () {
+                        _voice.alternarAcessibilidade(
+                          jogoController: context.read<JogoController>(),
+                          gameState: gs,
+                          jogoAtivo: _flow.jogoAtivo,
+                          perguntaAtual: _flow.perguntaAtual?.pergunta,
+                          onRelerPergunta: () => _falarPerguntaAtualSeAtivo(),
+                        );
+                      },
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 250),
+                CabecalhoJogoWidget(gs: gs, disputaAtiva: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
                 const Spacer(),
                 if (!_flow.jogoAtivo && !_exibindoMensagem)
-                  Center(child: Column(children: [
-                    if (gs.temPartidaSalva) _buildMenuButton("CONTINUAR", Colors.orange, _continuarPartida),
-                    const SizedBox(height: 20),
-                    Focus(
-                      focusNode: _menuButtonFocusNode,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-                          _iniciarJogo();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: _buildMenuButton(gs.temPartidaSalva ? "NOVO JOGO" : "COMEÇAR", Colors.green, _iniciarJogo),
-                    ),
-                  ]))
+                  MenuInicialWidget(
+                    temPartidaSalva: gs.temPartidaSalva,
+                    menuButtonFocusNode: _menuButtonFocusNode,
+                    onContinuar: _continuarPartida,
+                    onIniciar: _iniciarJogo,
+                  )
                 else if (_flow.jogoAtivo)
                   AreaPerguntaWidget(
                     key: ValueKey(_flow.perguntaAtual?.pergunta),
@@ -245,79 +242,20 @@ class _JogoScreenState extends State<JogoScreen> {
               ],
             ),
           ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.elasticOut,
+          Positioned(
             bottom: !widget.isModoDisputa ? MediaQuery.of(context).size.height * 0.15 : 20.0,
             right: 20,
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: const Text("Dica?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
-                ),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 1.0, end: 1.1),
-                  duration: const Duration(seconds: 1),
-                  curve: Curves.easeInOut,
-                  builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-                  child: GestureDetector(
-                    onTap: _exibirDica,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [BoxShadow(color: Colors.yellow.withOpacity(0.5), blurRadius: 20, spreadRadius: 5)],
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Image.asset('assets/images/mascote_cal.png', width: 150),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: MascoteDicaWidget(onExibirDica: _exibirDica),
           ),
           if (_exibindoMensagem)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black87,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(30),
-                    decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(20)),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text(_tituloMsg, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 20),
-                      Text(_conteudoMsg, style: const TextStyle(color: Colors.white, fontSize: 18)),
-                      const SizedBox(height: 30),
-                      Focus(
-                        focusNode: _menuButtonFocusNode,
-                        onKeyEvent: (node, event) {
-                          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-                            _confirmarDialogo(_msgEhFimFase);
-                            return KeyEventResult.handled;
-                          }
-                          return KeyEventResult.ignored;
-                        },
-                        child: ElevatedButton(
-                          onPressed: () => _confirmarDialogo(_msgEhFimFase),
-                          child: const Text("CONTINUAR", style: TextStyle(fontSize: 20)),
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-              ),
+            MensagemDialogWidget(
+              titulo: _tituloMsg,
+              conteudo: _conteudoMsg,
+              focusNode: _menuButtonFocusNode,
+              onContinuar: () => _confirmarDialogo(_msgEhFimFase),
             ),
         ],
       ),
     );
   }
-
-  Widget _buildMenuButton(String text, Color color, VoidCallback onPressed) => ElevatedButton(
-    onPressed: onPressed,
-    style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-    child: Text(text, style: const TextStyle(fontSize: 28, color: Colors.white)),
-  );
 }
