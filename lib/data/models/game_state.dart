@@ -1,5 +1,8 @@
+// lib/data/models/game_state.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../data/services/ranking_service.dart';
 import '../../domain/usecases/calcular_pontuacao_usecase.dart';
 import '../../core/enums/nivel_enum.dart';
 import '../../core/config/estrutura_pedagogica.dart';
@@ -16,10 +19,11 @@ class GameState extends ChangeNotifier {
   int _tempoAcumuladoDoNivelAtual = 0;
   bool _temPartidaSalva = false;
   
-  Map<String, int> _melhoresTempos = {};
+  // Armazena os recordes mapeados por perfil e nível (Ex: {'crianca_bronze': 45, 'adulto_bronze': 30})
+  Map<String, int> _melhoresTemposPorPerfil = {};
   Map<String, int> _xpPorPerfil = {'crianca': 0, 'adulto': 0, 'professor': 0};
   int progressoMissaoDiaria = 0;
-  final int metaMissaoDiaria = 10; // RESTAURADO
+  final int metaMissaoDiaria = 10;
   bool acessibilidadeVoz = false;
 
   GameState() { _carregarEstadoInicial(); }
@@ -28,13 +32,18 @@ class GameState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     progressoMissaoDiaria = prefs.getInt('progresso_missao') ?? 0;
     _temPartidaSalva = prefs.getBool('tem_partida_salva') ?? false;
-    for (var nivel in Nivel.values) {
-      _melhoresTempos[nivel.name] = prefs.getInt('recorde_${nivel.name}') ?? 0;
+    
+    // Carrega os recordes isolados para cada combinação de Perfil e Nível
+    for (var p in ['crianca', 'adulto', 'professor']) {
+      for (var nivel in Nivel.values) {
+        String chave = '${p}_${nivel.name}';
+        _melhoresTemposPorPerfil[chave] = prefs.getInt('recorde_$chave') ?? 0;
+      }
     }
     notifyListeners();
   }
 
-  // --- GETTERS E MÉTODOS REQUISITADOS ---
+  // --- GETTERS E MÉTODOS ---
   bool get temPartidaSalva => _temPartidaSalva;
   int get pontos => _xpPorPerfil[perfil.toLowerCase()] ?? 0;
   int get xpTotal => pontos;
@@ -45,19 +54,32 @@ class GameState extends ChangeNotifier {
   String get nivelParaService => nivelAtual.name;
   String get nomeNivelExibicao => nivelAtual.name.toUpperCase();
   bool get acessibilidadeAtiva => acessibilidadeVoz;
-  Map<String, int> get recordesPorNivel => _melhoresTempos;
+  
+  // Retorna os recordes específicos do perfil atual selecionado
+  Map<String, int> get recordesPorNivel {
+    Map<String, int> mapPerfil = {};
+    for (var nivel in Nivel.values) {
+      mapPerfil[nivel.name] = _melhoresTemposPorPerfil['${perfil.toLowerCase()}_${nivel.name}'] ?? 0;
+    }
+    return mapPerfil;
+  }
+
   Map<String, String> get nomesRecordesPorNivel => {};
 
   String formatarMinutos(int s) => "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
   String normalizarRespostaFalada(String texto) => texto.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
   String obterDataDoRecorde(String nivel) => "--/--/----";
 
-  void definirPerfil(String novoPerfil) { perfil = novoPerfil.toLowerCase(); notifyListeners(); }
+  void definirPerfil(String novoPerfil) { 
+    perfil = novoPerfil.toLowerCase(); 
+    notifyListeners(); 
+  }
+  
   void carregarRecordesLocais() => notifyListeners();
   void resetFase() { perguntaAtual = 1; notifyListeners(); }
   void resetarPerguntaParaPrimeira() { perguntaAtual = 1; notifyListeners(); }
   void resetarNivelParaInicioDoNivel() { faseAtual = 1; perguntaAtual = 1; _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
-  void resetTempoAcumulado() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); } // RESTAURADO
+  void resetTempoAcumulado() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
   void zerarTempoAoPassarDeNivel() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
   void alternarAcessibilidadeVoz() { acessibilidadeVoz = !acessibilidadeVoz; notifyListeners(); }
   
@@ -69,20 +91,39 @@ class GameState extends ChangeNotifier {
     return false;
   }
 
-  // --- LÓGICA DE MEDALHAS E TEMPO ---
+  // --- LÓGICA DE MEDALHAS E TEMPO SEPARADA POR PERFIL ---
   Future<void> salvarRecorde(String nivelNome, int tempo) async {
     final prefs = await SharedPreferences.getInstance();
-    int recordeAtual = _melhoresTempos[nivelNome] ?? 0;
+    String chave = '${perfil.toLowerCase()}_$nivelNome';
+    int recordeAtual = _melhoresTemposPorPerfil[chave] ?? 0;
+    
     if (recordeAtual == 0 || tempo < recordeAtual) {
-      _melhoresTempos[nivelNome] = tempo;
-      await prefs.setInt('recorde_$nivelNome', tempo);
+      _melhoresTemposPorPerfil[chave] = tempo;
+      await prefs.setInt('recorde_$chave', tempo);
       notifyListeners();
+
+      // Sincroniza com o Ranking Global enviando também o perfil
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          String nomeUsuario = "${user.displayName ?? user.email?.split('@').first ?? 'Estudante'} (${perfil.toUpperCase()})";
+          
+          await RankingService().salvarPontuacaoGlobal(
+            uid: '${user.uid}_${perfil.toLowerCase()}', // Chave única por perfil do usuário
+            nome: nomeUsuario,
+            nivel: '$nivelNome (${perfil.toUpperCase()})',
+            tempo: tempo,
+          );
+        }
+      } catch (e) {
+        debugPrint("Erro ao sincronizar ranking global: $e");
+      }
     }
   }
 
-  // CORRIGIDO: Agora recebe String, não int
   String obterTipoMedalha(String nivelNome) {
-    int tempo = _melhoresTempos[nivelNome] ?? 0;
+    String chave = '${perfil.toLowerCase()}_$nivelNome';
+    int tempo = _melhoresTemposPorPerfil[chave] ?? 0;
     if (tempo == 0) return "";
     if (tempo < 60) return "🥇 Ouro";
     if (tempo < 120) return "🥈 Prata";
@@ -90,8 +131,9 @@ class GameState extends ChangeNotifier {
   }
 
   void concluirEAvancarFase() {
-    if (faseAtual < EstruturaProgresso.fasesPorNivel) faseAtual++;
-    else { 
+    if (faseAtual < EstruturaProgresso.fasesPorNivel) {
+      faseAtual++;
+    } else { 
       salvarRecorde(nivelAtual.name, _tempoAcumuladoDoNivelAtual);
       _subirNivel(); 
       faseAtual = 1; 
@@ -104,8 +146,10 @@ class GameState extends ChangeNotifier {
 
   void _subirNivel() {
     nivelAtual = switch (nivelAtual) {
-      Nivel.bronze => Nivel.prata, Nivel.prata => Nivel.ouro,
-      Nivel.ouro => Nivel.platina, Nivel.platina => Nivel.mestre,
+      Nivel.bronze => Nivel.prata, 
+      Nivel.prata => Nivel.ouro,
+      Nivel.ouro => Nivel.platina, 
+      Nivel.platina => Nivel.mestre,
       _ => Nivel.mestre,
     };
   }
