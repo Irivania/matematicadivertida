@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../routes/app_routes.dart';
+import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../../data/models/game_state.dart';
@@ -19,10 +20,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin { // Mudado para TickerProvider
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  late AnimationController _glowController; // Novo controlador para o pulso
+  late AnimationController _glowController;
 
   @override
   void initState() {
@@ -31,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
 
-    // Controlador para o efeito de pulso
     _glowController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
   }
 
@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 border: Border.all(color: Colors.red.withOpacity(0.5), width: 1),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withOpacity(0.3 + (_glowController.value * 0.3)), // Brilho oscilante
+                                    color: Colors.red.withOpacity(0.3 + (_glowController.value * 0.3)),
                                     blurRadius: 10 + (_glowController.value * 10),
                                     spreadRadius: 2,
                                   ),
@@ -137,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ... (Restante dos métodos permanecem iguais)
   void _navegarParaJogo(BuildContext context, String modo) {
     final gs = context.read<GameState>();
     if (modo == 'disputa') {
@@ -154,14 +153,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildExitButton(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), borderRadius: BorderRadius.circular(14)),
-      child: IconButton(
-        icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 30),
-        onPressed: () async {
-          await Provider.of<AuthController>(context, listen: false).logout();
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          debugPrint("DEBUG: Botão de saída clicado na HomeScreen!");
+          
+          // Força a navegação direta para a tela de Login limpando o histórico
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+
+          // Executa o logout no Firebase em segundo plano
+          Future.microtask(() async {
+            try {
+              await Provider.of<AuthController>(context, listen: false).logout();
+            } catch (e) {
+              debugPrint("Erro ao deslogar em segundo plano: $e");
+            }
+          });
         },
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5), 
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: const Icon(Icons.exit_to_app, color: Colors.white, size: 28),
+        ),
       ),
     );
   }

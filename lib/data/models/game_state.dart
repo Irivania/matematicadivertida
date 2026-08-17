@@ -19,9 +19,13 @@ class GameState extends ChangeNotifier {
   int _tempoAcumuladoDoNivelAtual = 0;
   bool _temPartidaSalva = false;
   
-  // Armazena os recordes mapeados por perfil e nível (Ex: {'crianca_bronze': 45, 'adulto_bronze': 30})
+  // Armazena os recordes mapeados por perfil e nível
   Map<String, int> _melhoresTemposPorPerfil = {};
   Map<String, int> _xpPorPerfil = {'crianca': 0, 'adulto': 0, 'professor': 0};
+  
+  // Armazena o tempo gasto em cada fase (1 a 10) para alimentar o gráfico de desempenho
+  final Map<int, int> _temposPorFase = {};
+
   int progressoMissaoDiaria = 0;
   final int metaMissaoDiaria = 10;
   bool acessibilidadeVoz = false;
@@ -33,7 +37,6 @@ class GameState extends ChangeNotifier {
     progressoMissaoDiaria = prefs.getInt('progresso_missao') ?? 0;
     _temPartidaSalva = prefs.getBool('tem_partida_salva') ?? false;
     
-    // Carrega os recordes isolados para cada combinação de Perfil e Nível
     for (var p in ['crianca', 'adulto', 'professor']) {
       for (var nivel in Nivel.values) {
         String chave = '${p}_${nivel.name}';
@@ -43,7 +46,7 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- GETTERS E MÉTODOS ---
+  // --- GETTERS COMPATÍVEIS COM AS TELAS ---
   bool get temPartidaSalva => _temPartidaSalva;
   int get pontos => _xpPorPerfil[perfil.toLowerCase()] ?? 0;
   int get xpTotal => pontos;
@@ -54,8 +57,7 @@ class GameState extends ChangeNotifier {
   String get nivelParaService => nivelAtual.name;
   String get nomeNivelExibicao => nivelAtual.name.toUpperCase();
   bool get acessibilidadeAtiva => acessibilidadeVoz;
-  
-  // Retorna os recordes específicos do perfil atual selecionado
+
   Map<String, int> get recordesPorNivel {
     Map<String, int> mapPerfil = {};
     for (var nivel in Nivel.values) {
@@ -66,6 +68,7 @@ class GameState extends ChangeNotifier {
 
   Map<String, String> get nomesRecordesPorNivel => {};
 
+  // --- MÉTODOS AUXILIARES E FORMATAÇÕES ---
   String formatarMinutos(int s) => "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
   String normalizarRespostaFalada(String texto) => texto.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
   String obterDataDoRecorde(String nivel) => "--/--/----";
@@ -86,9 +89,25 @@ class GameState extends ChangeNotifier {
   bool comprarVidaExtra() {
     if (pontos >= 500) {
       _xpPorPerfil[perfil.toLowerCase()] = pontos - 500;
-      vidas++; notifyListeners(); return true;
+      vidas++; 
+      notifyListeners(); 
+      return true;
     }
     return false;
+  }
+
+  // --- GERENCIAMENTO DE TEMPOS POR FASE (PARA O GRÁFICO) ---
+  void registrarTempoFase(int fase, int segundos) {
+    _temposPorFase[fase] = segundos;
+    notifyListeners();
+  }
+
+  int obterTempoDaFase(int fase) => _temposPorFase[fase] ?? 0;
+
+  // --- NOVO: MÉTODO PARA RETORNAR O TEMPO TOTAL DO NÍVEL ---
+  int obterTempoTotalNivel(String nivelNome) {
+    String chave = '${perfil.toLowerCase()}_$nivelNome';
+    return _melhoresTemposPorPerfil[chave] ?? 0;
   }
 
   // --- LÓGICA DE MEDALHAS E TEMPO SEPARADA POR PERFIL ---
@@ -102,14 +121,13 @@ class GameState extends ChangeNotifier {
       await prefs.setInt('recorde_$chave', tempo);
       notifyListeners();
 
-      // Sincroniza com o Ranking Global enviando também o perfil
       try {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           String nomeUsuario = "${user.displayName ?? user.email?.split('@').first ?? 'Estudante'} (${perfil.toUpperCase()})";
           
           await RankingService().salvarPontuacaoGlobal(
-            uid: '${user.uid}_${perfil.toLowerCase()}', // Chave única por perfil do usuário
+            uid: '${user.uid}_${perfil.toLowerCase()}',
             nome: nomeUsuario,
             nivel: '$nivelNome (${perfil.toUpperCase()})',
             tempo: tempo,
@@ -131,6 +149,8 @@ class GameState extends ChangeNotifier {
   }
 
   void concluirEAvancarFase() {
+    registrarTempoFase(faseAtual, _tempoAcumuladoDoNivelAtual);
+
     if (faseAtual < EstruturaProgresso.fasesPorNivel) {
       faseAtual++;
     } else { 

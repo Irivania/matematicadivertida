@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RankingService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Salvar ou atualizar o recorde do usuário na nuvem
   Future<void> salvarPontuacaoGlobal({
     required String uid,
     required String nome,
@@ -11,17 +11,17 @@ class RankingService {
     required int tempo,
   }) async {
     try {
+      // Usamos um ID único por usuário/nível para que ele tenha apenas um registro por nível
       final docRef = _db.collection('ranking').doc('${uid}_$nivel');
       
-      // Verifica se já existe um recorde melhor antes de substituir
       final docSnapshot = await docRef.get();
       if (docSnapshot.exists) {
         int tempoAnterior = docSnapshot.data()?['tempo'] ?? 999999;
-        if (tempo >= tempoAnterior) return; // Se o anterior for melhor, não faz nada
+        if (tempo >= tempoAnterior) return; 
       }
 
       await docRef.set({
-        'uid': uid,
+        'uid': uid, // Guardamos o UID original para identificar o dono do registro
         'nome': nome,
         'nivel': nivel,
         'tempo': tempo,
@@ -32,16 +32,21 @@ class RankingService {
     }
   }
 
-  // Buscar o ranking global ordenado por menor tempo
   Future<List<Map<String, dynamic>>> buscarRankingGlobal() async {
     try {
       final querySnapshot = await _db
           .collection('ranking')
           .orderBy('tempo', descending: false)
-          .limit(10) // Pega os top 10
+          .limit(10)
           .get();
 
-      return querySnapshot.docs.map((doc) => doc.data()).toList();
+      return querySnapshot.docs.map((doc) {
+        var data = doc.data();
+        // Adicionamos um campo extra para saber se este registro é do usuário logado
+        data['isMe'] = (FirebaseAuth.instance.currentUser?.uid != null) && 
+                       (data['uid'].toString().contains(FirebaseAuth.instance.currentUser!.uid));
+        return data;
+      }).toList();
     } catch (e) {
       print("Erro ao buscar ranking: $e");
       return [];
