@@ -21,13 +21,13 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
+          flutter-version: 'any'
           channel: 'stable'
 
       - name: Instalar Dependências
         run: flutter pub get
 
-      - name: Compilar APK (App Bundle / Split per ABI)
+      - name: Compilar APK (Split per ABI)
         run: flutter build apk --release --split-per-abi
 
       - name: Salvar APK como artefato
