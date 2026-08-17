@@ -55,5 +55,5 @@ Contribuições são bem-vindas! Sinta-se à vontade para fazer um fork, abrir u
 Este projeto está licenciado sob a licença MIT. Consulte o arquivo LICENSE para detalhes.
 
 
-Basta substituir o conteúdo do seu `README.md` atual por este bloco e fazer o commit para o seu repositório!
+
 
