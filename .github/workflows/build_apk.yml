@@ -28,7 +28,7 @@ jobs:
         run: flutter pub get
 
       - name: Compilar APK (Split per ABI)
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --dart-define=android.newDsl=false
 
       - name: Salvar APK como artefato
         uses: actions/upload-artifact@v4
