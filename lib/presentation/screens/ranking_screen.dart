@@ -51,41 +51,40 @@ class _RankingScreenState extends State<RankingScreen> {
                 alignment: Alignment.topCenter
               ),
             ),
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.65))),
+            // Fundo mais claro (opacidade 0.35)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.35))),
             
-            SafeArea(
+            Padding(
+              padding: const EdgeInsets.only(top: 30, left: 16, right: 16, bottom: 16),
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildBotaoSair(context),
-                        Row(
-                          children: [
-                            const Text(
-                              "ESTATÍSTICAS",
-                              style: TextStyle(
-                                color: Colors.white, 
-                                fontSize: 18, 
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.refresh, color: AppColors.neonCiano, size: 20),
-                              onPressed: _carregarDados,
-                              tooltip: "Atualizar Estatísticas",
-                            ),
-                          ],
+                  // Cabeçalho: Botão Sair na esquerda e Estatísticas na DIREITA
+                  Row(
+                    children: [
+                      _buildBotaoSair(context),
+                      const Spacer(), 
+                      const Text(
+                        "ESTATÍSTICAS",
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2
                         ),
-                        const SizedBox(width: 40),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: AppColors.neonCiano, size: 20),
+                        onPressed: _carregarDados,
+                        tooltip: "Atualizar Estatísticas",
+                      ),
+                    ],
                   ),
 
+                  // Espaço para afastar da logo da imagem de fundo
+                  const SizedBox(height: 250),
+
+                  // Abas (Ranking Disputa / Meu Progresso)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     decoration: BoxDecoration(
@@ -108,6 +107,9 @@ class _RankingScreenState extends State<RankingScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 10),
+
+                  // Conteúdo das Abas
                   Expanded(
                     child: TabBarView(
                       children: [

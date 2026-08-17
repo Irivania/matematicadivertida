@@ -5,59 +5,55 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Latest-FFA500?logo=firebase)](https://firebase.google.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](/LICENSE)
 
-Aplicativo de matemática gamificada desenvolvido com Flutter e Firebase. O projeto reúne jogos, progresso, autenticação e uma experiência de aprendizado mais dinâmica para diferentes perfis de usuários.
+Aplicativo de matemática gamificada desenvolvido com Flutter e Firebase. O projeto reúne desafios interativos, progressão de fases, autenticação e uma experiência de aprendizado dinâmica e acessível para diferentes perfis de usuários.
 
-> Status: em desenvolvimento | Plataformas: Android, iOS e Web
+> Status: Concluído / Em evolução | Plataformas: Android, iOS e Web
 
-## ✅ O que foi ajustado recentemente
+## ✨ Funcionalidades Principais
 
-- Login com Google compatível com a versão 7.x do pacote `google_sign_in`
-- Suporte ao fluxo de autenticação na web com Firebase Authentication
-- Configuração do Firebase para a plataforma web
-- Ajuste na inicialização do app para carregar corretamente as opções do projeto
+- **Perfis Personalizados:** Perguntas adaptadas dinamicamente para os perfis **Criança**, **Adulto** e **Professor**.
+- **Modos de Jogo:** Sistema de fases por níveis (de Bronze a Mestre) e **Modo Disputa** com ranking global.
+- **Acessibilidade e Interação por Voz:** 
+  - **Text-to-Speech (TTS):** Leitura automática ou manual das perguntas pelo app.
+  - **Speech-to-Text (STT):** Reconhecimento de voz para que o usuário possa responder falando.
+- **Estatísticas e Progresso:** Acompanhamento detalhado de recordes locais e desempenho nas abas de progresso.
+- **Autenticação:** Suporte a login com Google e integração completa com o Firebase Authentication.
 
 ## 🚀 Como executar
 
 ```bash
-git clone https://github.com/Irivania/matematicadivertida.git
+git clone [https://github.com/Irivania/matematicadivertida.git](https://github.com/Irivania/matematicadivertida.git)
 cd matematicadivertida
 flutter pub get
-```
 
-### Web
-
-```bash
+Web
+Bash
 flutter run -d chrome --web-port=5000 --web-browser-flag="--disable-web-security"
-```
-
-### Android
-
-```bash
+Android
+Bash
 flutter run -d android
-```
+🔧 Requisitos
+Flutter 3.10+
 
-## 🔧 Requisitos
+Dart 3.10+
 
-- Flutter 3.10+
-- Dart 3.10+
-- Firebase configurado para o projeto
-- Conta Google Cloud com OAuth habilitado para autenticação
+Firebase configurado para o projeto
 
-## 📁 Estrutura do projeto
+Conta Google Cloud com OAuth habilitado para autenticação
 
-```text
+📁 Estrutura do projeto
+Plaintext
 lib/
-├── core/        # Configurações gerais
-├── data/        # Serviços, repositórios e fontes de dados
-├── domain/      # Regras e entidades do negócio
-└── presentation/# Telas, widgets e controllers
-```
+├── core/         # Configurações globais, temas e enums
+├── data/         # Serviços (voz, áudio, fluxo, perguntas), repositórios e modelos
+├── domain/       # Regras e entidades do negócio
+└── presentation/ # Telas (ranking, jogo, perfis), widgets e controllers
+🤝 Contribuindo
+Contribuições são bem-vindas! Sinta-se à vontade para fazer um fork, abrir uma issue ou enviar um pull request com melhorias.
 
-## 🤝 Contribuindo
+📝 Licença
+Este projeto está licenciado sob a licença MIT. Consulte o arquivo LICENSE para detalhes.
 
-Contribuições são bem-vindas. Faça um fork, crie uma branch e envie um pull request com a sua alteração.
 
-## 📝 Licença
-
-Este projeto está licenciado sob a licença MIT. Consulte o arquivo [LICENSE](/LICENSE) para detalhes.
+Basta substituir o conteúdo do seu `README.md` atual por este bloco e fazer o commit para o seu repositório!
 

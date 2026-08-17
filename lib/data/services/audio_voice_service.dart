@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class AudioVoiceService extends ChangeNotifier {
   final FlutterTts _tts = FlutterTts();
   final SpeechToText _stt = SpeechToText();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _isListening = false;
   String _wordsSpoken = "";
@@ -23,7 +25,7 @@ class AudioVoiceService extends ChangeNotifier {
     try {
       await _tts.setLanguage("pt-BR");
       await _tts.setSpeechRate(0.5); 
-      await _tts.setPitch(1.1);      
+      await _tts.setPitch(1.1);       
       await _tts.setVolume(1.0);     
       await _tts.awaitSpeakCompletion(true);
 
@@ -71,6 +73,16 @@ class AudioVoiceService extends ChangeNotifier {
     try {
       await _tts.stop();
     } catch (_) {}
+  }
+
+  /// Método para reproduzir os efeitos sonoros da pasta assets/sons/
+  Future<void> tocarEfeitoSonoro(String nomeArquivo) async {
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sons/$nomeArquivo'));
+    } catch (e) {
+      print("Erro ao reproduzir efeito sonoro $nomeArquivo: $e");
+    }
   }
 
   Future<void> iniciarEscuta(Function(int? numero) onNumeroRecebido) async {
@@ -128,6 +140,7 @@ class AudioVoiceService extends ChangeNotifier {
   void dispose() {
     _tts.stop();
     _stt.stop();
+    _audioPlayer.dispose();
     super.dispose();
   }
 }

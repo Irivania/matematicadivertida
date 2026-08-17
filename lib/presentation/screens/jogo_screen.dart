@@ -97,8 +97,8 @@ class _JogoScreenState extends State<JogoScreen> {
 
     final escolha = isFimFase 
         ? (ehFimDeJogo ? {"tit": "Você é uma Lenda! 👑", "msg": "Você superou todos os desafios! Parabéns, Mestre Supremo!"} 
-                       : (ehFimDeNivel ? {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se para o próximo nível!"} 
-                                       : {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"}))
+                        : (ehFimDeNivel ? {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se para o próximo nível!"} 
+                                        : {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"}))
         : (msgsErro..shuffle()).first;
 
     String medalha = (isFimFase && !ehFimDeJogo) ? gs.obterTipoMedalha(gs.nivelAtual.name) : "";
