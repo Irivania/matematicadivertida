@@ -29,8 +29,8 @@ class MascoteDicaWidget extends StatelessWidget {
           const SizedBox(height: 4),
           // Usamos o SizedBox para forçar o tamanho exato desejado na tela
           SizedBox(
-            width: 300, 
-            height: 300,
+            width: 150, 
+            height: 150,
             child: Container(
               decoration: const BoxDecoration(
                 shape: BoxShape.circle, 

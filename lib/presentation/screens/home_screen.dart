@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final larguraTela = MediaQuery.of(context).size.width;
-    final bool eTelaLarga = larguraTela > 600;
+    final bool eTelaLarga = larguraTela > 768;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -53,12 +53,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         opacity: _animation,
         child: Stack(
           children: [
-            // FUNDO COM ALINHAMENTO SUPERIOR PARA NÃO CORTAR O LOGO
+            // FUNDO COM ENQUADRAMENTO CENTRALIZADO NA WEB E TOPO NO CELULAR
             Positioned.fill(
               child: Image.asset(
-                'assets/images/fundo_home.png', 
+                'assets/images/fundo_home.png', // Certifique-se da extensão correta (png)
                 fit: BoxFit.cover, 
-                alignment: Alignment.topCenter,
+                alignment: eTelaLarga ? Alignment.center : Alignment.topCenter,
               ),
             ),
             Container(color: Colors.black.withOpacity(0.12)),
@@ -80,51 +80,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: Container(
                               width: double.infinity,
                               constraints: BoxConstraints(
-                                maxWidth: eTelaLarga ? 500 : 420,
+                                maxWidth: eTelaLarga ? 600 : 420,
                               ),
                               child: Column(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      // BOTÃO SAIR BEM NA ESQUERDA
-                                      _buildExitButton(context),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // BOTÃO SAIR BEM NA ESQUERDA
+                                        _buildExitButton(context),
 
-                                      // LOJA DO CAL COM BORDA AZUL CLARO (NEON CIANO), TEXTO EM PRETO E ÍCONE EM BRANCO
-                                      GestureDetector(
-                                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LojaScreen())),
-                                        child: AnimatedBuilder(
-                                          animation: _glowController,
-                                          builder: (context, child) => Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(15),
-                                              border: Border.all(color: AppColors.neonCiano, width: 1.5),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: AppColors.neonCiano.withOpacity(0.3 + (_glowController.value * 0.3)),
-                                                  blurRadius: 10 + (_glowController.value * 10),
-                                                  spreadRadius: 2,
-                                                ),
+                                        // LOJA DO CAL NA DIREITA
+                                        GestureDetector(
+                                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LojaScreen())),
+                                          child: AnimatedBuilder(
+                                            animation: _glowController,
+                                            builder: (context, child) => Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(15),
+                                                border: Border.all(color: AppColors.neonCiano, width: 1.5),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppColors.neonCiano.withOpacity(0.3 + (_glowController.value * 0.3)),
+                                                    blurRadius: 10 + (_glowController.value * 10),
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: child,
+                                            ),
+                                            child: const Row(
+                                              children: [
+                                                Icon(Icons.shopping_bag, color: Colors.white, size: 36),
+                                                SizedBox(width: 8),
+                                                Text("Loja do Cal", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16, shadows: [Shadow(color: Colors.white, blurRadius: 4)])),
                                               ],
                                             ),
-                                            child: child,
-                                          ),
-                                          child: const Row(
-                                            children: [
-                                              Icon(Icons.shopping_bag, color: Colors.white, size: 36),
-                                              SizedBox(width: 8),
-                                              Text("Loja do Cal", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16, shadows: [Shadow(color: Colors.white, blurRadius: 4)])),
-                                            ],
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
 
-                                  // AUMENTADO PARA 200 PARA DESCER MAIS O TEXTO "OLÁ FRANCISCO"
-                                  const SizedBox(height: 200), 
+                                  // ESPAÇAMENTO REDUZIDO PARA TRAZER O NOME MAIS PARA CIMA
+                                  SizedBox(height: eTelaLarga ? 25 : 40), 
                                   
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 16),
