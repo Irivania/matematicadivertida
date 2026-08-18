@@ -78,10 +78,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // FUNDO
+          // FUNDO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
           Positioned.fill(
-            child: Image.asset('assets/images/fundo_imagem_perfil.png', 
-                fit: BoxFit.cover, alignment: Alignment.topCenter),
+            child: Image.asset(
+              'assets/images/fundo_imagem_perfil.png', 
+              fit: BoxFit.cover, 
+              alignment: Alignment.center,
+            ),
           ),
           
           // OVERLAY ESCURO

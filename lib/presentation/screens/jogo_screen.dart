@@ -78,7 +78,6 @@ class _JogoScreenState extends State<JogoScreen> {
         pergunta: _flow.perguntaAtual!.pergunta,
         jogoAtivo: _flow.jogoAtivo,
         onAcionarMicrofone: () {
-          // Chamada correta utilizando o método acionarMicrofone nativo do JogoVoiceService
           _voice.acionarMicrofone(
             jogoController: context.read<JogoController>(),
             gameState: gs,
@@ -91,9 +90,7 @@ class _JogoScreenState extends State<JogoScreen> {
                 _executarValidacao();
               }
             },
-            onFinalizado: () {
-              // Callback opcional se precisar tratar o fim da escuta
-            },
+            onFinalizado: () {},
           );
         },
       );
@@ -214,7 +211,13 @@ class _JogoScreenState extends State<JogoScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Positioned.fill(child: FittedBox(fit: BoxFit.cover, alignment: Alignment.topCenter, child: Image.asset('assets/images/${widget.perfil}.png'))),
+          Positioned.fill(
+            child: FittedBox(
+              fit: BoxFit.cover, 
+              alignment: Alignment.center, 
+              child: Image.asset('assets/images/${widget.perfil}.png'),
+            ),
+          ),
           SafeArea(
             child: Column(
               children: [

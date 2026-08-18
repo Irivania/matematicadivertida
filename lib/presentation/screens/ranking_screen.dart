@@ -44,11 +44,12 @@ class _RankingScreenState extends State<RankingScreen> {
         backgroundColor: Colors.black,
         body: Stack(
           children: [
+            // FUNDO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
             Positioned.fill(
               child: Image.asset(
                 'assets/images/imagem_fundo_ranking.png', 
                 fit: BoxFit.cover, 
-                alignment: Alignment.topCenter
+                alignment: Alignment.center,
               ),
             ),
             // Fundo mais claro (opacidade 0.35)

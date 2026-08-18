@@ -13,12 +13,12 @@ class LojaScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. FUNDO
+          // 1. FUNDO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
           Positioned.fill(
             child: Image.asset(
               'assets/images/loja_do_cal.png',
               fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
+              alignment: Alignment.center,
             ),
           ),
 

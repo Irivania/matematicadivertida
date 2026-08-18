@@ -1,3 +1,4 @@
+// lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -48,8 +49,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         opacity: _animation,
         child: Stack(
           children: [
+            // FUNDO AJUSTADO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
             Positioned.fill(
-              child: Image.asset('assets/images/fundo_home.png', fit: BoxFit.cover, alignment: Alignment.topCenter),
+              child: Image.asset(
+                'assets/images/fundo_home.png', 
+                fit: BoxFit.cover, 
+                alignment: Alignment.center,
+              ),
             ),
             Container(color: Colors.black.withOpacity(0.12)),
             _buildBackgroundGlow(),
@@ -97,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
 
-                  // Substituído o espaçamento fixo enorme por um ajuste fluido
                   const SizedBox(height: 15), 
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
