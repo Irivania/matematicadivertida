@@ -27,8 +27,8 @@ jobs:
       - name: Instalar Dependências
         run: flutter pub get
 
-      - name: Compilar APK (Bypass Gradle Validation)
-        run: flutter build apk --release --split-per-abi --dart-define=android.newDsl=false --android-skip-build-dependency-validation
+      - name: Compilar APK Universal
+        run: flutter build apk --release --dart-define=android.newDsl=false --android-skip-build-dependency-validation
 
       - name: Salvar APK como artefato
         uses: actions/upload-artifact@v4
