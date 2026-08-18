@@ -78,48 +78,26 @@ class _JogoScreenState extends State<JogoScreen> {
         pergunta: _flow.perguntaAtual!.pergunta,
         jogoAtivo: _flow.jogoAtivo,
         onAcionarMicrofone: () {
+          // Chamada correta utilizando o método acionarMicrofone nativo do JogoVoiceService
           _voice.acionarMicrofone(
             jogoController: context.read<JogoController>(),
             gameState: gs,
             jogoAtivo: _flow.jogoAtivo,
             onTextoCapturado: (textoReconhecido) {
               if (mounted && _flow.jogoAtivo) {
-                // Normaliza o texto falado (converte palavras para números e limpa ruídos)
-                String respostaTratada = _converterTextoParaNumero(textoReconhecido);
-
                 setState(() {
-                  _respostaController.text = respostaTratada;
+                  _respostaController.text = textoReconhecido;
                 });
                 _executarValidacao();
               }
             },
-            onFinalizado: () {},
+            onFinalizado: () {
+              // Callback opcional se precisar tratar o fim da escuta
+            },
           );
         },
       );
     }
-  }
-
-  // Método auxiliar para traduzir números falados por extenso e limpar caracteres
-  String _converterTextoParaNumero(String texto) {
-    String limpo = texto.trim().toLowerCase();
-    
-    final Map<String, String> mapaNumeros = {
-      'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
-      'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7',
-      'oito': '8', 'nove': '9', 'dez': '10', 'onze': '11',
-      'doze': '12', 'treze': '13', 'quatorze': '14', 'quinze': '15',
-      'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
-      'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
-      'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
-      'cem': '100'
-    };
-
-    if (mapaNumeros.containsKey(limpo)) {
-      return mapaNumeros[limpo]!;
-    }
-    
-    return limpo.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
   void _mostrarDialogo(bool isFimFase) {
@@ -234,84 +212,58 @@ class _JogoScreenState extends State<JogoScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          Positioned.fill(
-            child: FittedBox(
-              fit: BoxFit.cover, 
-              alignment: Alignment.center, 
-              child: Image.asset('assets/images/${widget.perfil}.png'),
+          Positioned.fill(child: FittedBox(fit: BoxFit.cover, alignment: Alignment.topCenter, child: Image.asset('assets/images/${widget.perfil}.png'))),
+          SafeArea(
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
+                    IconButton(
+                      icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30),
+                      onPressed: () {
+                        _voice.alternarAcessibilidade(
+                          jogoController: context.read<JogoController>(),
+                          gameState: gs,
+                          jogoAtivo: _flow.jogoAtivo,
+                          perguntaAtual: _flow.perguntaAtual?.pergunta,
+                          onRelerPergunta: () => _falarPerguntaAtualSeAtivo(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 250),
+                CabecalhoJogoWidget(gs: gs, disputaAtiva: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
+                const Spacer(),
+                if (!_flow.jogoAtivo && !_exibindoMensagem)
+                  MenuInicialWidget(
+                    temPartidaSalva: gs.temPartidaSalva,
+                    menuButtonFocusNode: _menuButtonFocusNode,
+                    onContinuar: _continuarPartida,
+                    onIniciar: _iniciarJogo,
+                  )
+                else if (_flow.jogoAtivo)
+                  AreaPerguntaWidget(
+                    key: ValueKey(_flow.perguntaAtual?.pergunta),
+                    perguntaAtual: _flow.perguntaAtual,
+                    jogoAtivo: _flow.jogoAtivo,
+                    disputaAtiva: _flow.disputaAtiva,
+                    controller: _respostaController,
+                    focusNode: _respostaFocusNode,
+                    onValidar: _executarValidacao,
+                  ),
+                const Spacer(flex: 2),
+              ],
             ),
           ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)),
-                              IconButton(
-                                icon: Icon(gs.acessibilidadeAtiva ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 30),
-                                onPressed: () {
-                                  _voice.alternarAcessibilidade(
-                                    jogoController: context.read<JogoController>(),
-                                    gameState: gs,
-                                    jogoAtivo: _flow.jogoAtivo,
-                                    perguntaAtual: _flow.perguntaAtual?.pergunta,
-                                    onRelerPergunta: () => _falarPerguntaAtualSeAtivo(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          CabecalhoJogoWidget(gs: gs, disputaAtiva: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
-                          const Spacer(),
-                          if (!_flow.jogoAtivo && !_exibindoMensagem)
-                            MenuInicialWidget(
-                              temPartidaSalva: gs.temPartidaSalva,
-                              menuButtonFocusNode: _menuButtonFocusNode,
-                              onContinuar: _continuarPartida,
-                              onIniciar: _iniciarJogo,
-                            )
-                          else if (_flow.jogoAtivo)
-                            AreaPerguntaWidget(
-                              key: ValueKey(_flow.perguntaAtual?.pergunta),
-                              perguntaAtual: _flow.perguntaAtual,
-                              jogoAtivo: _flow.jogoAtivo,
-                              disputaAtiva: _flow.disputaAtiva,
-                              controller: _respostaController,
-                              focusNode: _respostaFocusNode,
-                              onValidar: _executarValidacao,
-                            ),
-                          const Spacer(flex: 2),
-                          Padding(
-                            padding: EdgeInsets.only(
-                              bottom: !widget.isModoDisputa ? MediaQuery.of(context).size.height * 0.05 : 10.0,
-                              right: 20,
-                            ),
-                            child: Align(
-                              alignment: Alignment.bottomRight,
-                              child: MascoteDicaWidget(onExibirDica: _exibirDica),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+          Positioned(
+            bottom: !widget.isModoDisputa ? MediaQuery.of(context).size.height * 0.15 : 20.0,
+            right: 20,
+            child: MascoteDicaWidget(onExibirDica: _exibirDica),
           ),
           if (_exibindoMensagem)
             MensagemDialogWidget(
