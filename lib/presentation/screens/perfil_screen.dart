@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:matematicadivertida/presentation/controllers/auth_controller.dart';
 import '../../data/models/game_state.dart';
-import '../widgets/perfil/perfil_card.dart'; // Importação do seu novo componente isolado
+import '../widgets/perfil/perfil_card.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -28,8 +28,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }
 
   void _iniciarAudio() async {
-    await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-    await _audioPlayer.play(AssetSource('sons/Subindo_de_nível.mp3'));
+    try {
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      // Caminho corrigido sem o prefixo 'assets/' para o audioplayers encontrar o arquivo
+      await _audioPlayer.play(AssetSource('sons/Subindo_de_nível.mp3'));
+    } catch (e) {
+      debugPrint("Erro ao tocar música de fundo: $e");
+    }
   }
 
   @override
@@ -48,7 +53,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
     _modo = modoCru.toLowerCase().contains('disputa') ? "Disputa 🏆" : "Treino";
   }
 
-  // Lógica central de seleção mantida
   void _selecionarPerfil(String perfil) async {
     final gs = context.read<GameState>();
     gs.definirPerfil(perfil); 
@@ -139,7 +143,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
 
-          // CARDS (Agora limpos e organizados)
+          // CARDS
           Align(
             alignment: Alignment.center,
             child: Padding(

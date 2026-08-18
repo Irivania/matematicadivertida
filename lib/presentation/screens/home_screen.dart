@@ -1,4 +1,3 @@
-// lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -86,9 +85,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.shopping_bag, color: Colors.amber, size: 50),
+                                Icon(Icons.shopping_bag, color: Colors.amber, size: 36),
                                 SizedBox(width: 8),
-                                Text("Loja do Cal", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
+                                Text("Loja do Cal", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
                               ],
                             ),
                           ),
@@ -98,7 +97,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
 
-                  const SizedBox(height: 175), 
+                  // Substituído o espaçamento fixo enorme por um ajuste fluido
+                  const SizedBox(height: 15), 
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: HomeHeader(),
@@ -107,16 +107,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Expanded(
                     child: Center(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 700),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const MissionCard(),
-                              const SizedBox(height: 25),
+                              const SizedBox(height: 20),
                               const Text("ESCOLHA SEU MODO DE JOGO", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                              const SizedBox(height: 15),
+                              const SizedBox(height: 12),
                               GameModeButton(titulo: "MODO TREINO", subtitulo: "Jogue sem pressão, sem perder vidas", cor: AppColors.neonCiano, onPressed: () => _navegarParaJogo(context, 'treino')),
                               const SizedBox(height: 10),
                               GameModeButton(titulo: "MODO DISPUTA 🏆", subtitulo: "Corra contra o tempo (2x XP)", cor: Colors.amber, onPressed: () => _navegarParaJogo(context, 'disputa')),
@@ -159,14 +159,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(14),
         onTap: () {
           debugPrint("DEBUG: Botão de saída clicado na HomeScreen!");
-          
-          // Força a navegação direta para a tela de Login limpando o histórico
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
             (route) => false,
           );
-
-          // Executa o logout no Firebase em segundo plano
           Future.microtask(() async {
             try {
               await Provider.of<AuthController>(context, listen: false).logout();
@@ -182,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white24),
           ),
-          child: const Icon(Icons.exit_to_app, color: Colors.white, size: 28),
+          child: const Icon(Icons.exit_to_app, color: Colors.white, size: 24),
         ),
       ),
     );
@@ -191,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildRankingButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 55,
+      height: 50,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7CFFB2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RankingScreen())),
