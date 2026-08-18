@@ -78,16 +78,21 @@ class _JogoScreenState extends State<JogoScreen> {
         pergunta: _flow.perguntaAtual!.pergunta,
         jogoAtivo: _flow.jogoAtivo,
         onAcionarMicrofone: () {
-          _voice.ouvirResposta(
+          // Chamada correta utilizando o método acionarMicrofone nativo do JogoVoiceService
+          _voice.acionarMicrofone(
             jogoController: context.read<JogoController>(),
-            onResultado: (textoReconhecido) {
+            gameState: gs,
+            jogoAtivo: _flow.jogoAtivo,
+            onTextoCapturado: (textoReconhecido) {
               if (mounted && _flow.jogoAtivo) {
-                String respostaLimpa = textoReconhecido.trim().toLowerCase().replaceAll(RegExp(r'[.,!?-]'), '');
                 setState(() {
-                  _respostaController.text = respostaLimpa;
+                  _respostaController.text = textoReconhecido;
                 });
                 _executarValidacao();
               }
+            },
+            onFinalizado: () {
+              // Callback opcional se precisar tratar o fim da escuta
             },
           );
         },
