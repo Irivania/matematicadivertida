@@ -27,11 +27,11 @@ jobs:
       - name: Instalar Dependências
         run: flutter pub get
 
-      - name: Compilar APK Universal
+      - name: Compilar APK Universal Release
         run: flutter build apk --release --dart-define=android.newDsl=false --android-skip-build-dependency-validation
 
-      - name: Salvar APK como artefato
+      - name: Salvar APK Direto
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
