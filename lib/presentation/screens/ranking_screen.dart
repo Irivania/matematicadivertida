@@ -42,6 +42,7 @@ class _RankingScreenState extends State<RankingScreen> {
       length: 2,
       child: Scaffold(
         backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
             // FUNDO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
@@ -55,74 +56,90 @@ class _RankingScreenState extends State<RankingScreen> {
             // Fundo mais claro (opacidade 0.35)
             Positioned.fill(child: Container(color: Colors.black.withOpacity(0.35))),
             
-            Padding(
-              padding: const EdgeInsets.only(top: 30, left: 16, right: 16, bottom: 16),
-              child: Column(
-                children: [
-                  // Cabeçalho: Botão Sair na esquerda e Estatísticas na DIREITA
-                  Row(
-                    children: [
-                      _buildBotaoSair(context),
-                      const Spacer(), 
-                      const Text(
-                        "ESTATÍSTICAS",
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontSize: 18, 
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              // Cabeçalho: Botão Sair na esquerda e Estatísticas na DIREITA
+                              Row(
+                                children: [
+                                  _buildBotaoSair(context),
+                                  const Spacer(), 
+                                  const Text(
+                                    "ESTATÍSTICAS",
+                                    style: TextStyle(
+                                      color: Colors.white, 
+                                      fontSize: 18, 
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.2
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh, color: AppColors.neonCiano, size: 20),
+                                    onPressed: _carregarDados,
+                                    tooltip: "Atualizar Estatísticas",
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Abas (Ranking Disputa / Meu Progresso)
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: TabBar(
+                                  indicator: BoxDecoration(
+                                    color: AppColors.neonCiano,
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  labelColor: Colors.black,
+                                  unselectedLabelColor: Colors.white,
+                                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  tabs: const [
+                                    Tab(text: "🏆 RANKING DISPUTA"),
+                                    Tab(text: "🎖️ MEU PROGRESSO"),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // Conteúdo das Abas com altura flexível segura
+                              SizedBox(
+                                height: 500,
+                                child: TabBarView(
+                                  children: [
+                                    RankingGlobalTab(
+                                      futureRanking: _futureRankingGlobal,
+                                      onRefresh: _carregarDados,
+                                    ),
+                                    MeuProgressoTab(gameState: gameState),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: AppColors.neonCiano, size: 20),
-                        onPressed: _carregarDados,
-                        tooltip: "Atualizar Estatísticas",
-                      ),
-                    ],
-                  ),
-
-                  // Espaço para afastar da logo da imagem de fundo
-                  const SizedBox(height: 250),
-
-                  // Abas (Ranking Disputa / Meu Progresso)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: Colors.white24),
                     ),
-                    child: TabBar(
-                      indicator: BoxDecoration(
-                        color: AppColors.neonCiano,
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      labelColor: Colors.black,
-                      unselectedLabelColor: Colors.white,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      tabs: const [
-                        Tab(text: "🏆 RANKING DISPUTA"),
-                        Tab(text: "🎖️ MEU PROGRESSO"),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Conteúdo das Abas
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        RankingGlobalTab(
-                          futureRanking: _futureRankingGlobal,
-                          onRefresh: _carregarDados,
-                        ),
-                        MeuProgressoTab(gameState: gameState),
-                      ],
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ],

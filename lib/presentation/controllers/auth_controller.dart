@@ -1,3 +1,4 @@
+// lib/presentation/controllers/auth_controller.dart
 import 'package:flutter/material.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/i_auth_repository.dart';
@@ -40,9 +41,23 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
     try {
       final user = await _authRepository.signInWithEmailAndPassword(email: email, senha: senha);
-      if (user != null) onSuccess(); else onError("Falha no login");
-    } catch (e) { onError(e.toString()); } 
-    finally { _setLoading(false); }
+      if (user != null) {
+        onSuccess();
+      } else {
+        onError("E-mail ou senha inválidos.");
+      }
+    } catch (e) {
+      String msg = "Erro ao realizar login. Tente novamente.";
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains("user-not-found") || errStr.contains("wrong-password") || errStr.contains("invalid-credential")) {
+        msg = "E-mail ou senha incorretos.";
+      } else if (errStr.contains("network-request-failed")) {
+        msg = "Sem conexão com a internet.";
+      }
+      onError(msg);
+    } finally { 
+      _setLoading(false); 
+    }
   }
 
   Future<void> cadastrarComEmail({
@@ -55,9 +70,25 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
     try {
       final user = await _authRepository.signUpWithEmailAndPassword(email: email, senha: senha, nome: nome);
-      if (user != null) onSuccess(); else onError("Falha no cadastro");
-    } catch (e) { onError(e.toString()); } 
-    finally { _setLoading(false); }
+      if (user != null) {
+        onSuccess();
+      } else {
+        onError("Falha ao criar conta.");
+      }
+    } catch (e) {
+      String msg = "Erro ao cadastrar. Tente novamente.";
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains("email-already-in-use")) {
+        msg = "Este e-mail já está cadastrado.";
+      } else if (errStr.contains("weak-password")) {
+        msg = "A senha é muito fraca (mínimo de 6 caracteres).";
+      } else if (errStr.contains("invalid-email")) {
+        msg = "O formato do e-mail é inválido.";
+      }
+      onError(msg);
+    } finally { 
+      _setLoading(false); 
+    }
   }
 
   Future<void> recuperarSenha({
@@ -68,7 +99,9 @@ class AuthController extends ChangeNotifier {
     try {
       await _authRepository.sendPasswordResetEmail(email: email);
       onSuccess();
-    } catch (e) { onError(e.toString()); }
+    } catch (e) {
+      onError("Não foi possível enviar o e-mail de recuperação. Verifique o endereço.");
+    }
   }
 
   Future<void> loginComGoogle({
@@ -78,9 +111,16 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
     try {
       final user = await _authRepository.signInWithGoogle();
-      if (user != null) onSuccess(); else onError("Login cancelado");
-    } catch (e) { onError(e.toString()); } 
-    finally { _setLoading(false); }
+      if (user != null) {
+        onSuccess();
+      } else {
+        onError("Login com Google cancelado.");
+      }
+    } catch (e) {
+      onError("Erro ao autenticar com o Google.");
+    } finally { 
+      _setLoading(false); 
+    }
   }
 
   Future<void> logout() async {
@@ -91,7 +131,12 @@ class AuthController extends ChangeNotifier {
 
   Future<void> escolherPerfilParaJogar({required String nome, required String perfilEscolhido}) async {
     _perfilAtivo = perfilEscolhido;
-    _progressoAtual = ProgressoGameModel(nomeJogador: nome, crianca: ProgressoPerfil(fase: 1, nivel: 1), adulto: ProgressoPerfil(fase: 1, nivel: 1), professor: ProgressoPerfil(fase: 1, nivel: 1));
+    _progressoAtual = ProgressoGameModel(
+      nomeJogador: nome, 
+      crianca: ProgressoPerfil(fase: 1, nivel: 1), 
+      adulto: ProgressoPerfil(fase: 1, nivel: 1), 
+      professor: ProgressoPerfil(fase: 1, nivel: 1)
+    );
     notifyListeners();
   }
 

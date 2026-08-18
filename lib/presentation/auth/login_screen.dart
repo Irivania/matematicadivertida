@@ -1,3 +1,4 @@
+// lib/presentation/auth/login_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,11 +17,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _ocultarSenha = true;
 
-  final TextEditingController _emailController =
-      TextEditingController();
-
-  final TextEditingController _senhaController =
-      TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _senhaController = TextEditingController();
 
   @override
   void dispose() {
@@ -44,7 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
           onSuccess: () {
             if (!mounted) return;
 
-            // FLUXO LINEAR SEGURO: Limpa toda a pilha de telas e força a inicialização na HomeScreen
             Navigator.pushNamedAndRemoveUntil(
               context,
               AppRoutes.home,
@@ -96,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
           onSuccess: () {
             if (!mounted) return;
 
-            // FLUXO LINEAR SEGURO: Limpa toda a pilha de telas e força a inicialização na HomeScreen
             Navigator.pushNamedAndRemoveUntil(
               context,
               AppRoutes.home,
@@ -124,15 +120,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
-
     final larguraTela = MediaQuery.of(context).size.width;
-    final alturaTela = MediaQuery.of(context).size.height;
-
     final bool eTelaLarga = larguraTela > 600;
 
     return Scaffold(
       backgroundColor: const Color(0xff1a103c),
-
+      resizeToAvoidBottomInset: true,
       body: authController.isLoading
           ? const Center(
               child: CircularProgressIndicator(
@@ -141,22 +134,19 @@ class _LoginScreenState extends State<LoginScreen> {
             )
           : Stack(
               children: [
-
                 // =========================
-                // IMAGEM DE FUNDO
+                // IMAGEM DE FUNDO COM ENQUADRAMENTO CENTRALIZADO
                 // =========================
                 Positioned.fill(
                   child: Image.asset(
                     'assets/images/imagem_login.png',
                     fit: BoxFit.cover,
-
-                    // Ajuste fino da imagem
-                    alignment: const Alignment(0, -0.15),
+                    alignment: Alignment.center,
                   ),
                 ),
 
                 // =========================
-                // OVERLAY ESCURO (AJUSTADO: Opacidade reduzida de 0.45 para 0.15 para clarear o fundo)
+                // OVERLAY ESCURO
                 // =========================
                 Positioned.fill(
                   child: Container(
@@ -174,496 +164,350 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 // =========================
-                // CONTEÚDO
+                // CONTEÚDO RESPONSIVO SEGURO
                 // =========================
-                Positioned.fill(
-                  child: SafeArea(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        physics:
-                            const BouncingScrollPhysics(),
-
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 20,
-                        ),
-
-                        child: Container(
-                          width: double.infinity,
-
+                SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: ConstrainedBox(
                           constraints: BoxConstraints(
-                            maxWidth:
-                                eTelaLarga ? 420 : 380,
+                            minHeight: constraints.maxHeight,
                           ),
-
-                          child: Align(
-                            // POSIÇÃO ENTRE PERSONAGENS
-                            alignment:
-                                const Alignment(0, 0.26),
-
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                top: alturaTela * 0.22,
-                              ),
-
-                              child: ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(24),
-
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 12,
-                                    sigmaY: 12,
+                          child: IntrinsicHeight(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 20,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  constraints: BoxConstraints(
+                                    maxWidth: eTelaLarga ? 420 : 380,
                                   ),
-
-                                  child: Container(
-                                    padding:
-                                        const EdgeInsets.all(28),
-
-                                    decoration: BoxDecoration(
-                                      color:
-                                          const Color(0xFF1A1A3A)
-                                              .withOpacity(0.68),
-
-                                      borderRadius:
-                                          BorderRadius.circular(
-                                              24),
-
-                                      border: Border.all(
-                                        color: Colors.white
-                                            .withOpacity(0.20),
-                                        width: 1.5,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 12,
+                                        sigmaY: 12,
                                       ),
-
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withOpacity(0.35),
-                                          blurRadius: 20,
-                                          offset:
-                                              const Offset(0, 8),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(28),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1A1A3A)
+                                              .withOpacity(0.68),
+                                          borderRadius: BorderRadius.circular(24),
+                                          border: Border.all(
+                                            color: Colors.white
+                                                .withOpacity(0.20),
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.35),
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-
-                                    child: Column(
-                                      mainAxisSize:
-                                          MainAxisSize.min,
-
-                                      children: [
-
-                                        // =========================
-                                        // TÍTULO
-                                        // =========================
-                                        const Text(
-                                          "ÁREA DE IDENTIFICAÇÃO",
-
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight:
-                                                FontWeight.bold,
-                                            letterSpacing: 1.5,
-                                          ),
-                                        ),
-
-                                        const SizedBox(
-                                          height: 25),
-
-                                        // =========================
-                                        // E-MAIL
-                                        // =========================
-                                        TextField(
-                                          controller:
-                                              _emailController,
-
-                                          style:
-                                              const TextStyle(
-                                            color: Colors.white,
-                                          ),
-
-                                          keyboardType:
-                                              TextInputType
-                                                  .emailAddress,
-
-                                          decoration:
-                                              InputDecoration(
-                                            labelText:
-                                                "E-mail",
-
-                                            labelStyle:
-                                                const TextStyle(
-                                              color:
-                                                  Colors.white70,
-                                            ),
-
-                                            prefixIcon:
-                                                const Icon(
-                                              Icons.email,
-                                              color: AppColors
-                                                  .neonCiano,
-                                            ),
-
-                                            filled: true,
-
-                                            fillColor:
-                                                Colors.black
-                                                    .withOpacity(
-                                                        0.30),
-
-                                            enabledBorder:
-                                                OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                          12),
-
-                                              borderSide:
-                                                  BorderSide(
-                                                color: Colors
-                                                    .white
-                                                    .withOpacity(
-                                                        0.10),
-                                              ),
-                                            ),
-
-                                            focusedBorder:
-                                                OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                          12),
-
-                                              borderSide:
-                                                  const BorderSide(
-                                                color: AppColors
-                                                    .neonCiano,
-                                                width: 2,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(
-                                          height: 16),
-
-                                        // =========================
-                                        // SENHA
-                                        // =========================
-                                        TextField(
-                                          controller:
-                                              _senhaController,
-
-                                          style:
-                                              const TextStyle(
-                                            color: Colors.white,
-                                          ),
-
-                                          obscureText:
-                                              _ocultarSenha,
-
-                                          decoration:
-                                              InputDecoration(
-                                            labelText:
-                                                "Senha",
-
-                                            labelStyle:
-                                                const TextStyle(
-                                              color:
-                                                  Colors.white70,
-                                            ),
-
-                                            prefixIcon:
-                                                const Icon(
-                                              Icons.lock,
-                                              color: AppColors
-                                                  .neonCiano,
-                                            ),
-
-                                            filled: true,
-
-                                            fillColor:
-                                                Colors.black
-                                                    .withOpacity(
-                                                        0.30),
-
-                                            suffixIcon:
-                                                IconButton(
-                                              icon: Icon(
-                                                _ocultarSenha
-                                                    ? Icons
-                                                        .visibility_off
-                                                    : Icons
-                                                        .visibility,
-                                                color: Colors
-                                                    .white70,
-                                              ),
-
-                                              onPressed: () {
-                                                setState(() {
-                                                  _ocultarSenha =
-                                                      !_ocultarSenha;
-                                                });
-                                              },
-                                            ),
-
-                                            enabledBorder:
-                                                OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                          12),
-
-                                              borderSide:
-                                                  BorderSide(
-                                                color: Colors
-                                                    .white
-                                                    .withOpacity(
-                                                        0.10),
-                                              ),
-                                            ),
-
-                                            focusedBorder:
-                                                OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                          12),
-
-                                              borderSide:
-                                                  const BorderSide(
-                                                color: AppColors
-                                                    .neonCiano,
-                                                width: 2,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // =========================
-                                        // RECUPERAR SENHA
-                                        // =========================
-                                        Align(
-                                          alignment:
-                                              Alignment
-                                                  .centerRight,
-
-                                          child: TextButton(
-                                            onPressed:
-                                                _redefinirSenha,
-
-                                            child: const Text(
-                                              "Esqueci minha senha",
-
-                                              style: TextStyle(
-                                                color: AppColors
-                                                    .neonCiano,
-                                                fontSize: 13,
-                                                fontWeight:
-                                                    FontWeight
-                                                        .w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 8),
-
-                                        // =========================
-                                        // BOTÃO ENTRAR
-                                        // =========================
-                                        SizedBox(
-                                          width:
-                                              double.infinity,
-                                          height: 48,
-
-                                          child: ElevatedButton(
-                                            style:
-                                                ElevatedButton
-                                                    .styleFrom(
-                                              backgroundColor:
-                                                  Colors.white
-                                                      .withOpacity(
-                                                          0.15),
-
-                                              side: BorderSide(
-                                                color: Colors
-                                                    .white
-                                                    .withOpacity(
-                                                        0.30),
-                                              ),
-
-                                              shape:
-                                                  RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius
-                                                        .circular(
-                                                            12),
-                                              ),
-                                            ),
-
-                                            onPressed:
-                                                _fazerLoginEmail,
-
-                                            child: const Text(
-                                              "ENTRAR",
-
-                                              style: TextStyle(
-                                                color:
-                                                    Colors.white,
-                                                fontWeight:
-                                                    FontWeight
-                                                        .bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // =========================
-                                        // CADASTRO
-                                        // =========================
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment
-                                                  .center,
-
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            // =========================
+                                            // TÍTULO
+                                            // =========================
                                             const Text(
-                                              "Não tem uma conta?",
-
+                                              "ÁREA DE IDENTIFICAÇÃO",
                                               style: TextStyle(
-                                                color: Colors
-                                                    .white70,
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.5,
                                               ),
                                             ),
 
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pushNamed(
-                                                  context,
-                                                  AppRoutes
-                                                      .cadastro,
-                                                );
-                                              },
+                                            const SizedBox(height: 25),
 
-                                              child: const Text(
-                                                "Cadastre-se",
-
-                                                style:
-                                                    TextStyle(
-                                                  color: AppColors
-                                                      .neonCiano,
-                                                  fontWeight:
-                                                      FontWeight
-                                                          .bold,
+                                            // =========================
+                                            // E-MAIL
+                                            // =========================
+                                            TextField(
+                                              controller: _emailController,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              keyboardType:
+                                                  TextInputType.emailAddress,
+                                              decoration: InputDecoration(
+                                                labelText: "E-mail",
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.white70,
                                                 ),
+                                                prefixIcon: const Icon(
+                                                  Icons.email,
+                                                  color: AppColors.neonCiano,
+                                                ),
+                                                filled: true,
+                                                fillColor: Colors.black
+                                                    .withOpacity(0.30),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  borderSide: BorderSide(
+                                                    color: Colors.white
+                                                        .withOpacity(0.10),
+                                                  ),
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  borderSide:
+                                                      const BorderSide(
+                                                    color: AppColors.neonCiano,
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 16),
+
+                                            // =========================
+                                            // SENHA
+                                            // =========================
+                                            TextField(
+                                              controller: _senhaController,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              obscureText: _ocultarSenha,
+                                              decoration: InputDecoration(
+                                                labelText: "Senha",
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.white70,
+                                                ),
+                                                prefixIcon: const Icon(
+                                                  Icons.lock,
+                                                  color: AppColors.neonCiano,
+                                                ),
+                                                filled: true,
+                                                fillColor: Colors.black
+                                                    .withOpacity(0.30),
+                                                suffixIcon: IconButton(
+                                                  icon: Icon(
+                                                    _ocultarSenha
+                                                        ? Icons
+                                                            .visibility_off
+                                                        : Icons.visibility,
+                                                    color: Colors.white70,
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _ocultarSenha =
+                                                          !_ocultarSenha;
+                                                    });
+                                                  },
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  borderSide: BorderSide(
+                                                    color: Colors.white
+                                                        .withOpacity(0.10),
+                                                  ),
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  borderSide:
+                                                      const BorderSide(
+                                                    color: AppColors.neonCiano,
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            // =========================
+                                            // RECUPERAR SENHA
+                                            // =========================
+                                            Align(
+                                              alignment:
+                                                  Alignment.centerRight,
+                                              child: TextButton(
+                                                onPressed: _redefinirSenha,
+                                                child: const Text(
+                                                  "Esqueci minha senha",
+                                                  style: TextStyle(
+                                                    color: AppColors.neonCiano,
+                                                    fontSize: 13,
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 8),
+
+                                            // =========================
+                                            // BOTÃO ENTRAR
+                                            // =========================
+                                            SizedBox(
+                                              width: double.infinity,
+                                              height: 48,
+                                              child: ElevatedButton(
+                                                style: ElevatedButton
+                                                    .styleFrom(
+                                                  backgroundColor: Colors.white
+                                                      .withOpacity(0.15),
+                                                  side: BorderSide(
+                                                    color: Colors.white
+                                                        .withOpacity(0.30),
+                                                  ),
+                                                  shape:
+                                                      RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                ),
+                                                onPressed: _fazerLoginEmail,
+                                                child: const Text(
+                                                  "ENTRAR",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 12),
+
+                                            // =========================
+                                            // CADASTRO
+                                            // =========================
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                const Text(
+                                                  "Não tem uma conta?",
+                                                  style: TextStyle(
+                                                    color: Colors.white70,
+                                                  ),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pushNamed(
+                                                      context,
+                                                      AppRoutes.cadastro,
+                                                    );
+                                                  },
+                                                  child: const Text(
+                                                    "Cadastre-se",
+                                                    style: TextStyle(
+                                                      color: AppColors
+                                                          .neonCiano,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+
+                                            // =========================
+                                            // DIVISOR
+                                            // =========================
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 8,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Divider(
+                                                      color: Colors.white
+                                                          .withOpacity(0.20),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                      horizontal: 10,
+                                                    ),
+                                                    child: Text(
+                                                      "OU",
+                                                      style: TextStyle(
+                                                        color: Colors.white38,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: Divider(
+                                                      color: Colors.white
+                                                          .withOpacity(0.20),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+
+                                            // =========================
+                                            // GOOGLE
+                                            // =========================
+                                            SizedBox(
+                                              width: double.infinity,
+                                              height: 48,
+                                              child: ElevatedButton.icon(
+                                                icon: const Icon(
+                                                  Icons.login,
+                                                ),
+                                                label: const Text(
+                                                  "ENTRAR COM GOOGLE",
+                                                  style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton
+                                                    .styleFrom(
+                                                  backgroundColor:
+                                                      AppColors.neonCiano,
+                                                  foregroundColor:
+                                                      Colors.black,
+                                                  elevation: 2,
+                                                  shape:
+                                                      RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                ),
+                                                onPressed: _fazerLoginGoogle,
                                               ),
                                             ),
                                           ],
                                         ),
-
-                                        // =========================
-                                        // DIVISOR
-                                        // =========================
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets
-                                                  .symmetric(
-                                            vertical: 8,
-                                          ),
-
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Divider(
-                                                  color: Colors
-                                                      .white
-                                                      .withOpacity(
-                                                          0.20),
-                                                ),
-                                              ),
-
-                                              const Padding(
-                                                padding:
-                                                    EdgeInsets
-                                                        .symmetric(
-                                                  horizontal: 10,
-                                                ),
-
-                                                child: Text(
-                                                  "OU",
-
-                                                  style:
-                                                      TextStyle(
-                                                    color: Colors
-                                                        .white38,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ),
-
-                                              Expanded(
-                                                child: Divider(
-                                                  color: Colors
-                                                      .white
-                                                      .withOpacity(
-                                                          0.20),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // =========================
-                                        // GOOGLE
-                                        // =========================
-                                        SizedBox(
-                                          width:
-                                              double.infinity,
-                                          height: 48,
-
-                                          child:
-                                              ElevatedButton.icon(
-                                            icon: const Icon(
-                                              Icons.login,
-                                            ),
-
-                                            label: const Text(
-                                              "ENTRAR COM GOOGLE",
-
-                                              style: TextStyle(
-                                                fontWeight:
-                                                    FontWeight
-                                                        .bold,
-                                              ),
-                                            ),
-
-                                            style:
-                                                ElevatedButton
-                                                    .styleFrom(
-                                              backgroundColor:
-                                                  AppColors
-                                                      .neonCiano,
-
-                                              foregroundColor:
-                                                  Colors.black,
-
-                                              elevation: 2,
-
-                                              shape:
-                                                  RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius
-                                                        .circular(
-                                                            12),
-                                              ),
-                                            ),
-
-                                            onPressed:
-                                                _fazerLoginGoogle,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -671,8 +515,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],

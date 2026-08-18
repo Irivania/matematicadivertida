@@ -27,13 +27,19 @@ class _PerfilScreenState extends State<PerfilScreen> {
     _iniciarAudio();
   }
 
-  void _iniciarAudio() async {
+  Future<void> _iniciarAudio() async {
     try {
+      // Configura para tocar em loop
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      // Caminho corrigido sem o prefixo 'assets/' para o audioplayers encontrar o arquivo
-      await _audioPlayer.play(AssetSource('sons/Subindo_de_nível.mp3'));
+      // Carrega o asset de forma explícita
+      await _audioPlayer.play(AssetSource('sons/subindo_de_nivel.mp3'));
+      
+      if (mounted) {
+        setState(() => _estaSilenciado = false);
+      }
     } catch (e) {
-      debugPrint("Erro ao tocar música de fundo: $e");
+      // No Web, o autoplay pode ser bloqueado pelo navegador se o usuário não tiver interagido com a página
+      debugPrint("Erro ao tocar áudio (comum no Web se não houver interação): $e");
     }
   }
 
@@ -76,9 +82,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // FUNDO COM ALINHAMENTO CENTRALIZADO PARA ENQUADRAMENTO PERFEITO NO CELULAR
           Positioned.fill(
             child: Image.asset(
               'assets/images/fundo_imagem_perfil.png', 
@@ -87,7 +94,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
           
-          // OVERLAY ESCURO
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -100,66 +106,87 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
 
-          // BOTÃO SOM
-          Positioned(
-            top: 20, right: 80,
-            child: IconButton(
-              icon: Icon(_estaSilenciado ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 35),
-              onPressed: () {
-                setState(() => _estaSilenciado = !_estaSilenciado);
-                _estaSilenciado ? _audioPlayer.pause() : _audioPlayer.resume();
-              },
-            ),
-          ),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.45),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        RichText(
+                                          text: TextSpan(children: [
+                                            TextSpan(text: "Olá ", style: GoogleFonts.orbitron(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700)),
+                                            TextSpan(text: _nomeUsuario, style: GoogleFonts.orbitron(color: const Color(0xFFFF5A5A), fontSize: 24, fontWeight: FontWeight.w800)),
+                                          ]),
+                                        ),
+                                        Text("Você está no modo $_modo", style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton(
+                                  icon: Icon(_estaSilenciado ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 30),
+                                  onPressed: () {
+                                    setState(() => _estaSilenciado = !_estaSilenciado);
+                                    _estaSilenciado ? _audioPlayer.pause() : _audioPlayer.resume();
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                                  onPressed: () => Navigator.of(context).pushReplacementNamed('/home_view'),
+                                ),
+                              ],
+                            ),
 
-          // BOTÃO VOLTAR
-          Positioned(
-            top: 20, right: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 35),
-              onPressed: () => Navigator.of(context).pushReplacementNamed('/home_view'),
-            ),
-          ),
+                            const Spacer(),
 
-          // INFORMAÇÕES DO JOGADOR
-          Positioned(
-            top: 28, left: 28,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.45),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.15)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(children: [
-                      TextSpan(text: "Olá ", style: GoogleFonts.orbitron(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700)),
-                      TextSpan(text: _nomeUsuario, style: GoogleFonts.orbitron(color: const Color(0xFFFF5A5A), fontSize: 30, fontWeight: FontWeight.w800)),
-                    ]),
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                child: Wrap(
+                                  spacing: 20, 
+                                  runSpacing: 20, 
+                                  alignment: WrapAlignment.center,
+                                  children: [
+                                    PerfilCard(label: "CRIANÇA (MENINO)", img: "assets/images/menino.png", onTap: () => _selecionarPerfil("crianca")),
+                                    PerfilCard(label: "CRIANÇA (MENINA)", img: "assets/images/menina.png", onTap: () => _selecionarPerfil("crianca")),
+                                    PerfilCard(label: "MODO ADULTO", img: "assets/images/perfil_adulto.png", onTap: () => _selecionarPerfil("adulto")),
+                                    PerfilCard(label: "MODO PROFESSOR", img: "assets/images/perfil_professor.png", onTap: () => _selecionarPerfil("professor")),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const Spacer(),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  Text("Você está no modo $_modo", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          ),
-
-          // CARDS
-          Align(
-            alignment: Alignment.center,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 300),
-              child: Wrap(
-                spacing: 28, runSpacing: 28, alignment: WrapAlignment.center,
-                children: [
-                  PerfilCard(label: "CRIANÇA (MENINO)", img: "assets/images/menino.png", onTap: () => _selecionarPerfil("crianca")),
-                  PerfilCard(label: "CRIANÇA (MENINA)", img: "assets/images/menina.png", onTap: () => _selecionarPerfil("crianca")),
-                  PerfilCard(label: "MODO ADULTO", img: "assets/images/perfil_adulto.png", onTap: () => _selecionarPerfil("adulto")),
-                  PerfilCard(label: "MODO PROFESSOR", img: "assets/images/perfil_professor.png", onTap: () => _selecionarPerfil("professor")),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
