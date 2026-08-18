@@ -53,12 +53,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         opacity: _animation,
         child: Stack(
           children: [
-            // FUNDO COM ENQUADRAMENTO CENTRALIZADO IDÊNTICO AO LOGIN
+            // FUNDO COM ALINHAMENTO SUPERIOR PARA NÃO CORTAR O LOGO
             Positioned.fill(
               child: Image.asset(
                 'assets/images/fundo_home.png', 
                 fit: BoxFit.cover, 
-                alignment: Alignment.center,
+                alignment: Alignment.topCenter,
               ),
             ),
             Container(color: Colors.black.withOpacity(0.12)),
@@ -123,7 +123,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     ],
                                   ),
 
-                                  const SizedBox(height: 20), 
+                                  // AUMENTADO PARA 200 PARA DESCER MAIS O TEXTO "OLÁ FRANCISCO"
+                                  const SizedBox(height: 200), 
                                   
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 16),
