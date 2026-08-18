@@ -78,19 +78,14 @@ class _JogoScreenState extends State<JogoScreen> {
         pergunta: _flow.perguntaAtual!.pergunta,
         jogoAtivo: _flow.jogoAtivo,
         onAcionarMicrofone: () {
-          // LÓGICA DE VOZ AJUSTADA PARA NORMALIZAR A RESPOSTA
           _voice.ouvirResposta(
             jogoController: context.read<JogoController>(),
             onResultado: (textoReconhecido) {
               if (mounted && _flow.jogoAtivo) {
-                // Remove pontuação e espaços extras para garantir validação correta
                 String respostaLimpa = textoReconhecido.trim().toLowerCase().replaceAll(RegExp(r'[.,!?-]'), '');
-                
                 setState(() {
                   _respostaController.text = respostaLimpa;
                 });
-                
-                // Valida automaticamente após processar a voz
                 _executarValidacao();
               }
             },
