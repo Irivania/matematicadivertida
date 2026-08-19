@@ -1,3 +1,5 @@
+// lib/presentation/widgets/meu_progresso_tab.dart
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_colors.dart';
@@ -11,19 +13,54 @@ class MeuProgressoTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       children: [
-        Text("Perfil Ativo: ${gameState.perfil.toUpperCase()}", textAlign: TextAlign.center, style: const TextStyle(color: AppColors.neonCiano, fontSize: 15, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        _buildGraficoEvolucaoTempo(),
-        const SizedBox(height: 24),
-        const Text("Medalhas por Nível", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 1, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 12, childAspectRatio: 3.5,
-          children: Nivel.values.map((nivel) {
-            return _buildCardProgressoNivel(nivel, gameState.obterTipoMedalha(nivel.name), gameState.obterTempoTotalNivel(nivel.name));
-          }).toList(),
+        // Usamos um Center + ConstrainedBox para limitar a largura e evitar que estique de canto a canto
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 550),
+            child: Column(
+              children: [
+                Text(
+                  "Perfil Ativo: ${gameState.perfil.toUpperCase()}", 
+                  textAlign: TextAlign.center, 
+                  style: const TextStyle(color: AppColors.neonCiano, fontSize: 14, fontWeight: FontWeight.bold)
+                ),
+                const SizedBox(height: 12),
+                
+                // Gráfico mais compacto
+                _buildGraficoEvolucaoTempo(),
+                const SizedBox(height: 16),
+                
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Medalhas por Nível", 
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)
+                  ),
+                ),
+                const SizedBox(height: 8),
+                
+                // Lista de cards de progresso dos níveis mais curtos
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: Nivel.values.length,
+                  itemBuilder: (context, index) {
+                    final nivel = Nivel.values[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: _buildCardProgressoNivel(
+                        nivel, 
+                        gameState.obterTipoMedalha(nivel.name), 
+                        gameState.obterTempoTotalNivel(nivel.name),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -39,24 +76,48 @@ class MeuProgressoTab extends StatelessWidget {
     }
 
     return Container(
-      height: 220, padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)),
+      height: 180, // Altura reduzida para ficar mais compacto
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95), // Fundo claro sólido igual aos cards
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
+        border: Border.all(color: Colors.black26),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("📈 Curva de Desempenho (Tempo por Fase)", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Expanded(child: LineChart(LineChartData(
-            minY: 0, maxY: maiorTempo + 20,
-            gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (value) => const FlLine(color: Colors.white10, strokeWidth: 1)),
-            titlesData: FlTitlesData(
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (v, m) => Text('${v.toInt()}ª', style: const TextStyle(color: Colors.white60, fontSize: 10)))),
-              leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, getTitlesWidget: (v, m) => Text('${v.toInt()}s', style: const TextStyle(color: Colors.white60, fontSize: 9)))),
+          const Text(
+            "📈 Curva de Desempenho (Tempo por Fase)", 
+            style: TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                minY: 0, 
+                maxY: maiorTempo + 20,
+                gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (value) => const FlLine(color: Colors.black12, strokeWidth: 1)),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), 
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (v, m) => Text('${v.toInt()}ª', style: const TextStyle(color: Colors.black54, fontSize: 9)))),
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 28, getTitlesWidget: (v, m) => Text('${v.toInt()}s', style: const TextStyle(color: Colors.black54, fontSize: 9)))),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: pontos, 
+                    isCurved: true, 
+                    color: Colors.blueAccent, 
+                    barWidth: 2.5, 
+                    dotData: const FlDotData(show: true), 
+                    belowBarData: BarAreaData(show: true, color: Colors.blueAccent.withOpacity(0.15))
+                  )
+                ],
+              ),
             ),
-            borderData: FlBorderData(show: false),
-            lineBarsData: [LineChartBarData(spots: pontos, isCurved: true, color: AppColors.neonCiano, barWidth: 3, dotData: const FlDotData(show: true), belowBarData: BarAreaData(show: true, color: AppColors.neonCiano.withOpacity(0.2)))],
-          ))),
+          ),
         ],
       ),
     );
@@ -72,20 +133,38 @@ class MeuProgressoTab extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(15), border: Border.all(color: conquistada ? Colors.amber : Colors.white24, width: conquistada ? 2 : 1)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), // Padding interno reduzido
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95), // Fundo branco sólido
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 3, offset: const Offset(0, 1))],
+        border: Border.all(color: conquistada ? Colors.amber.shade700 : Colors.black26, width: conquistada ? 1.8 : 1.0),
+      ),
       child: Row(
         children: [
-          Icon(nivel.icone, color: conquistada ? Colors.amber : Colors.white70, size: 32),
-          const SizedBox(width: 16),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(nivel.name.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-              Text(conquistada ? "Conquista: $medalha" : "Status: Não Concluído", style: TextStyle(color: conquistada ? AppColors.neonCiano : Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
-              Text(textoTempo, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-            ],
-          )),
+          Icon(nivel.icone, color: conquistada ? Colors.amber.shade700 : Colors.black45, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  nivel.name.toUpperCase(), 
+                  style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold)
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  conquistada ? "Conquista: $medalha" : "Status: Não Concluído", 
+                  style: TextStyle(color: conquistada ? Colors.green.shade700 : Colors.black54, fontSize: 11, fontWeight: FontWeight.bold)
+                ),
+                Text(
+                  textoTempo, 
+                  style: const TextStyle(color: Colors.black87, fontSize: 10)
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

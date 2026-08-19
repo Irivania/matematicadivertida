@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // FUNDO COM ENQUADRAMENTO CENTRALIZADO NA WEB E TOPO NO CELULAR
             Positioned.fill(
               child: Image.asset(
-                'assets/images/fundo_home.png', // Certifique-se da extensão correta (png)
+                'assets/images/fundo_home.png', 
                 fit: BoxFit.cover, 
                 alignment: eTelaLarga ? Alignment.center : Alignment.topCenter,
               ),
@@ -126,12 +126,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
 
-                                  // ESPAÇAMENTO REDUZIDO PARA TRAZER O NOME MAIS PARA CIMA
-                                  SizedBox(height: eTelaLarga ? 25 : 40), 
-                                  
+                                  // ESPAÇAMENTO PARA O TÍTULO DO TOPO
+                                  SizedBox(height: eTelaLarga ? 15 : 25), 
+
+                                  // TÍTULO "MATEMÁTICA DIVERTIDA" LOGO ACIMA DO NOME/HEADER
+                                  Text(
+                                    "Matemática Divertida",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: eTelaLarga ? 32 : 26,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 1.1,
+                                      shadows: const [
+                                        Shadow(color: Colors.blueAccent, blurRadius: 6, offset: Offset(0, 2)),
+                                        Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 15),
+
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 16),
-                                    child: HomeHeader(),
+                                    child: HomeHeader(), // Aqui fica o "Olá Francisco"
                                   ),
 
                                   const SizedBox(height: 20),

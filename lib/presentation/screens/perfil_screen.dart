@@ -30,7 +30,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
   void _iniciarAudio() async {
     try {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      // Caminho corrigido sem o prefixo 'assets/' para o audioplayers encontrar o arquivo
       await _audioPlayer.play(AssetSource('sons/Subindo_de_nível.mp3'));
     } catch (e) {
       debugPrint("Erro ao tocar música de fundo: $e");
@@ -132,10 +131,18 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   RichText(
-                    text: TextSpan(children: [
-                      TextSpan(text: "Olá ", style: GoogleFonts.orbitron(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700)),
-                      TextSpan(text: _nomeUsuario, style: GoogleFonts.orbitron(color: const Color(0xFFFF5A5A), fontSize: 30, fontWeight: FontWeight.w800)),
-                    ]),
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: "Olá ", 
+                          style: GoogleFonts.orbitron(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
+                        ),
+                        TextSpan(
+                          text: _nomeUsuario, 
+                          style: GoogleFonts.orbitron(color: const Color(0xFFFF5A5A), fontSize: 30, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
                   ),
                   Text("Você está no modo $_modo", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
                 ],
@@ -143,11 +150,11 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
 
-          // CARDS
+          // CARDS POSICIONADOS MAIS ACIMA
           Align(
             alignment: Alignment.center,
             child: Padding(
-              padding: const EdgeInsets.only(top: 300),
+              padding: const EdgeInsets.only(top: 200),
               child: Wrap(
                 spacing: 28, runSpacing: 28, alignment: WrapAlignment.center,
                 children: [

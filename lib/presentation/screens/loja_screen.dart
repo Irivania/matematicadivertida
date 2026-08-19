@@ -1,226 +1,139 @@
 // lib/presentation/screens/loja_screen.dart
 
 import 'package:flutter/material.dart';
-
 import 'package:provider/provider.dart';
-
 import '../../data/models/game_state.dart';
 
-
-
 class LojaScreen extends StatelessWidget {
-
   const LojaScreen({super.key});
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
     final gs = context.watch<GameState>();
-
-
+    final larguraTela = MediaQuery.of(context).size.width;
+    final bool eCelular = larguraTela < 768;
 
     return Scaffold(
-
+      backgroundColor: Colors.black,
       body: Stack(
-
         children: [
-
           // 1. FUNDO
-
           Positioned.fill(
-
             child: Image.asset(
-
               'assets/images/loja_do_cal.png',
-
               fit: BoxFit.cover,
-
               alignment: Alignment.topCenter,
-
             ),
-
           ),
 
-
-
           // 2. CONTEÚDO
-
           SafeArea(
-
             child: Column(
-
               children: [
-
                 // CABEÇALHO COM SACOLA AMARELA
-
                 Padding(
-
                   padding: const EdgeInsets.all(20),
-
                   child: Row(
-
                     children: [
-
                       IconButton(
-
                         icon: const Icon(Icons.arrow_back, color: Colors.black, size: 30),
-
                         onPressed: () => Navigator.pop(context),
-
                       ),
-
                       const SizedBox(width: 10),
-
                       const Icon(Icons.shopping_bag, color: Colors.amber, size: 35), // SACOLA AMARELA
-
                       const SizedBox(width: 10),
-
-                      const Text("Loja do Cal",
-
-                          style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold)),
-
+                      const Text(
+                        "Loja do Cal",
+                        style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
                     ],
-
                   ),
-
                 ),
 
+                const SizedBox(height: 5),
 
+                // TÍTULO "MATEMÁTICA DIVERTIDA" NO TOPO
+                Text(
+                  "Matemática Divertida",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: eCelular ? 24 : 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 1.1,
+                    shadows: [
+                      const Shadow(color: Colors.blueAccent, blurRadius: 6, offset: Offset(0, 2)),
+                      const Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
+                    ],
+                  ),
+                ),
 
-                const Spacer(flex: 10),
-
-
+                // ESPAÇO AJUSTADO PARA TRAZER OS CARDS PARA O CENTRO
+                const Spacer(flex: 1),
 
                 // CARDS COM MAIS ALTURA (MAIS GROSSOS)
-
                 Center(
-
                   child: SizedBox(
-
                     width: 500,
-
                     child: Padding(
-
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-
                       child: Column(
-
                         children: [
-
                           // Card XP - Ajustado altura com contentPadding
-
                           Card(
-
                             color: Colors.green.shade600,
-
                             elevation: 10,
-
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-
                             child: Padding(
-
                               padding: const EdgeInsets.symmetric(vertical: 10),
-
                               child: ListTile(
-
                                 leading: const Icon(Icons.star, color: Colors.white, size: 45),
-
                                 title: const Text("Seu XP Atual", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-
                                 trailing: Text("${gs.xpTotal}", style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-
                               ),
-
                             ),
-
                           ),
-
                           const SizedBox(height: 25),
 
                           // Card Vida Extra - Ajustado altura
-
                           Card(
-
                             color: Colors.blue.shade600,
-
                             elevation: 10,
-
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-
                             child: Padding(
-
                               padding: const EdgeInsets.symmetric(vertical: 10),
-
                               child: ListTile(
-
                                 leading: const Icon(Icons.favorite, color: Colors.white, size: 40),
-
                                 title: const Text("Vida Extra", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-
                                 subtitle: const Text("Recupere 1 tentativa", style: TextStyle(color: Colors.white70)),
-
                                 trailing: ElevatedButton(
-
                                   style: ElevatedButton.styleFrom(
-
                                     backgroundColor: Colors.white,
-
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-
                                   ),
-
                                   onPressed: () {
-
                                     bool sucesso = gs.comprarVidaExtra();
-
                                     ScaffoldMessenger.of(context).showSnackBar(
-
                                       SnackBar(content: Text(sucesso ? "Vida comprada! ❤️" : "XP insuficiente! ❌")),
-
                                     );
-
                                   },
-
                                   child: const Text("500 XP", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-
                                 ),
-
                               ),
-
                             ),
-
                           ),
-
                         ],
-
                       ),
-
                     ),
-
                   ),
-
                 ),
-
-               
-
+                
                 const Spacer(flex: 2),
-
               ],
-
             ),
-
           ),
-
         ],
-
       ),
-
     );
-
   }
-
-} 
-
+}

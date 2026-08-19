@@ -78,7 +78,6 @@ class _JogoScreenState extends State<JogoScreen> {
         pergunta: _flow.perguntaAtual!.pergunta,
         jogoAtivo: _flow.jogoAtivo,
         onAcionarMicrofone: () {
-          // Chamada correta utilizando o método acionarMicrofone nativo do JogoVoiceService
           _voice.acionarMicrofone(
             jogoController: context.read<JogoController>(),
             gameState: gs,
@@ -91,9 +90,7 @@ class _JogoScreenState extends State<JogoScreen> {
                 _executarValidacao();
               }
             },
-            onFinalizado: () {
-              // Callback opcional se precisar tratar o fim da escuta
-            },
+            onFinalizado: () {},
           );
         },
       );
@@ -115,8 +112,8 @@ class _JogoScreenState extends State<JogoScreen> {
 
     final escolha = isFimFase 
         ? (ehFimDeJogo ? {"tit": "Você é uma Lenda! 👑", "msg": "Você superou todos os desafios! Parabéns, Mestre Supremo!"} 
-                      : (ehFimDeNivel ? {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se para o próximo nível!"} 
-                                      : {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"}))
+                    : (ehFimDeNivel ? {"tit": "Nível Superado! 🎖️", "msg": "Sua evolução é notável. Prepare-se para o próximo nível!"} 
+                                    : {"tit": "Fase Concluída! 🚀", "msg": "Você dominou esta etapa! Vamos para a próxima?"}))
         : (msgsErro..shuffle()).first;
 
     String medalha = (isFimFase && !ehFimDeJogo) ? gs.obterTipoMedalha(gs.nivelAtual.name) : "";
@@ -208,6 +205,9 @@ class _JogoScreenState extends State<JogoScreen> {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
+    final larguraTela = MediaQuery.of(context).size.width;
+    final bool eCelular = larguraTela < 768;
+
     if (!_flow.jogoAtivo && !_exibindoMensagem && !_menuButtonFocusNode.hasFocus) _garantirFocoMenu();
 
     return Scaffold(
@@ -236,7 +236,27 @@ class _JogoScreenState extends State<JogoScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 250),
+                
+                // TÍTULO FLUTUANTE RESPONSIVO NO TOPO
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    "Matemática Divertida",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: eCelular ? 22 : 30,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.1,
+                      shadows: [
+                        Shadow(color: Colors.blueAccent, blurRadius: 6, offset: Offset(0, 2)),
+                        Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 150), // Espaçamento ajustado para o quadro
                 CabecalhoJogoWidget(gs: gs, disputaAtiva: _flow.disputaAtiva, tempoRestante: _flow.displayTempo),
                 const Spacer(),
                 if (!_flow.jogoAtivo && !_exibindoMensagem)
