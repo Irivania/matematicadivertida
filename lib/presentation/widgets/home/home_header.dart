@@ -28,84 +28,109 @@ class _HomeHeaderState extends State<HomeHeader> {
   }
 
   Widget _buildViewMode(String nome) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 99),
-          child: Text(
-            "OLÁ, ${nome.toUpperCase()}!",
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.85), // Fundo translúcido elegante
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-        ),
-        GestureDetector(
-          onTap: () {
-            _nomeController.text = nome;
-            setState(() => _isEditing = true);
-          },
-          child: const Padding(
-            padding: EdgeInsets.only(top: 4),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.waving_hand_rounded, color: Colors.amber, size: 20),
+          const SizedBox(width: 8),
+          Flexible(
             child: Text(
-              "Editar apelido",
-              style: TextStyle(
-                color: AppColors.neonCiano,
-                fontSize: 11,
-                decoration: TextDecoration.underline,
+              "OLÁ, ${nome.toUpperCase()}!",
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () {
+              _nomeController.text = nome;
+              setState(() => _isEditing = true);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.neonCiano.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.edit, color: Colors.black87, size: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildEditMode(AuthController authController, String nomeAtual) {
-    return Column(
-      children: [
-        const Icon(Icons.account_circle, size: 44, color: AppColors.neonCiano),
-        const SizedBox(height: 8),
-        const Text("BEM-VINDO(A)! 👋\nCOMO QUER SER CHAMADO(A)?",
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.neonCiano, width: 1.5),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            "COMO QUER SER CHAMADO(A)?",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _nomeController,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: "Digite seu apelido...",
-                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                  filled: true,
-                  fillColor: Colors.black.withOpacity(0.25),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _nomeController,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: "Digite seu apelido...",
+                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.4),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              style: IconButton.styleFrom(backgroundColor: AppColors.neonCiano),
-              onPressed: () async {
-                final nomeDigitado = _nomeController.text.trim();
-                if (nomeDigitado.isNotEmpty) {
-                  await authController.escolherPerfilParaJogar(
-                    nome: nomeDigitado,
-                    perfilEscolhido: "crianca",
-                  );
-                  setState(() => _isEditing = false);
-                }
-              },
-              icon: const Icon(Icons.check, color: AppColors.backgroundEscuro),
-            ),
-          ],
-        ),
-      ],
+              const SizedBox(width: 8),
+              IconButton.filled(
+                style: IconButton.styleFrom(backgroundColor: AppColors.neonCiano),
+                onPressed: () async {
+                  final nomeDigitado = _nomeController.text.trim();
+                  if (nomeDigitado.isNotEmpty) {
+                    await authController.escolherPerfilParaJogar(
+                      nome: nomeDigitado,
+                      perfilEscolhido: "crianca",
+                    );
+                    setState(() => _isEditing = false);
+                  }
+                },
+                icon: const Icon(Icons.check, color: Colors.black, size: 18),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

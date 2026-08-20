@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // <- Necessário para i18n
+import 'package:matematicadivertida/l10n/app_localizations.dart'; // <- Caminho direto corrigido para o Web
 
 // Configuração do Firebase
 import 'package:matematicadivertida/core/config/firebase_options.dart';
@@ -64,6 +66,12 @@ class MeuApp extends StatelessWidget {
     return MaterialApp(
       title: 'Matemática Divertida',
       debugShowCheckedModeBanner: false,
+      
+      // CONFIGURAÇÕES DE INTERNACIONALIZAÇÃO (i18n) CONECTADAS AO GAMESTATE:
+      locale: context.watch<GameState>().currentLocale, // <- Controla o idioma dinamicamente
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF121212),

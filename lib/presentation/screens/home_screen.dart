@@ -1,6 +1,7 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:matematicadivertida/l10n/app_localizations.dart'; // <- Importação necessária para as traduções
 
 import '../routes/app_routes.dart';
 import '../auth/login_screen.dart';
@@ -44,6 +45,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Escuta o GameState para garantir que a tela reaja imediatamente quando o idioma mudar
+    context.watch<GameState>();
+    
+    final t = AppLocalizations.of(context)!; // Instância de tradução
     final larguraTela = MediaQuery.of(context).size.width;
     final bool eTelaLarga = larguraTela > 768;
 
@@ -53,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         opacity: _animation,
         child: Stack(
           children: [
-            // FUNDO COM ENQUADRAMENTO CENTRALIZADO NA WEB E TOPO NO CELULAR
+            // FUNDO DA TELA (Lousa Roxa)
             Positioned.fill(
               child: Image.asset(
                 'assets/images/fundo_home.png', 
@@ -61,8 +66,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 alignment: eTelaLarga ? Alignment.center : Alignment.topCenter,
               ),
             ),
-            Container(color: Colors.black.withOpacity(0.12)),
-            _buildBackgroundGlow(),
 
             SafeArea(
               child: LayoutBuilder(
@@ -76,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: IntrinsicHeight(
                         child: Center(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                             child: Container(
                               width: double.infinity,
                               constraints: BoxConstraints(
@@ -84,40 +87,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                               child: Column(
                                 children: [
+                                  // CABEÇALHO SUPERIOR (SAIR, IDIOMA E LOJA)
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 8),
+                                    padding: const EdgeInsets.only(top: 12),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        // BOTÃO SAIR BEM NA ESQUERDA
-                                        _buildExitButton(context),
-
-                                        // LOJA DO CAL NA DIREITA
+                                        // GRUPO ESQUERDO: SAIR E IDIOMA
+                                        Row(
+                                          children: [
+                                            _buildExitButton(context),
+                                            const SizedBox(width: 8),
+                                            _buildLanguageButton(context),
+                                          ],
+                                        ),
+                                        
+                                        // GRUPO DIREITO: LOJA
                                         GestureDetector(
-                                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LojaScreen())),
+                                          onTap: () => Navigator.push(
+                                            context, 
+                                            MaterialPageRoute(builder: (_) => const LojaScreen())
+                                          ),
                                           child: AnimatedBuilder(
                                             animation: _glowController,
                                             builder: (context, child) => Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(15),
-                                                border: Border.all(color: AppColors.neonCiano, width: 1.5),
+                                                color: Colors.white.withOpacity(0.12),
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: Colors.white70, width: 1.5),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: AppColors.neonCiano.withOpacity(0.3 + (_glowController.value * 0.3)),
-                                                    blurRadius: 10 + (_glowController.value * 10),
-                                                    spreadRadius: 2,
+                                                    color: Colors.white.withOpacity(0.15 + (_glowController.value * 0.15)),
+                                                    blurRadius: 8 + (_glowController.value * 6),
+                                                    spreadRadius: 1,
                                                   ),
                                                 ],
                                               ),
                                               child: child,
                                             ),
-                                            child: const Row(
+                                            child: Row(
                                               children: [
-                                                Icon(Icons.shopping_bag, color: Colors.white, size: 36),
-                                                SizedBox(width: 8),
-                                                Text("Loja do Cal", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16, shadows: [Shadow(color: Colors.white, blurRadius: 4)])),
+                                                const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  t.tituloLoja, // Texto traduzido dinamicamente
+                                                  style: const TextStyle(
+                                                    color: Colors.white, 
+                                                    fontWeight: FontWeight.bold, 
+                                                    fontSize: 14
+                                                  )
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -126,47 +146,73 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
 
-                                  // ESPAÇAMENTO PARA O TÍTULO DO TOPO
-                                  SizedBox(height: eTelaLarga ? 15 : 25), 
-
-                                  // TÍTULO "MATEMÁTICA DIVERTIDA" LOGO ACIMA DO NOME/HEADER
-                                  Text(
-                                    "Matemática Divertida",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: eTelaLarga ? 32 : 26,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 1.1,
-                                      shadows: const [
-                                        Shadow(color: Colors.blueAccent, blurRadius: 6, offset: Offset(0, 2)),
-                                        Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
-                                      ],
+                                  // LOGO PROFISSIONAL
+                                  Transform.translate(
+                                    offset: const Offset(0, -14),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Image.asset(
+                                        'assets/images/logo_matematica.png',
+                                        height: eTelaLarga ? 270 : 230,
+                                        fit: BoxFit.contain,
+                                      ),
                                     ),
                                   ),
 
-                                  const SizedBox(height: 15),
-
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 16),
-                                    child: HomeHeader(), // Aqui fica o "Olá Francisco"
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  Expanded(
+                                  // BLOCO INFERIOR
+                                  Transform.translate(
+                                    offset: const Offset(0, -22),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const MissionCard(),
-                                        const SizedBox(height: 20),
-                                        const Text("ESCOLHA SEU MODO DE JOGO", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                                        const SizedBox(height: 12),
-                                        GameModeButton(titulo: "MODO TREINO", subtitulo: "Jogue sem pressão, sem perder vidas", cor: AppColors.neonCiano, onPressed: () => _navegarParaJogo(context, 'treino')),
+                                        // HEADER COM O NOME DO USUÁRIO
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 12),
+                                          child: HomeHeader(), 
+                                        ),
+
                                         const SizedBox(height: 10),
-                                        GameModeButton(titulo: "MODO DISPUTA 🏆", subtitulo: "Corra contra o tempo (2x XP)", cor: Colors.amber, onPressed: () => _navegarParaJogo(context, 'disputa')),
-                                        const SizedBox(height: 10),
-                                        _buildRankingButton(context),
+
+                                        // CONTEÚDO PRINCIPAL (MISSÃO E MODOS DE JOGO)
+                                        Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          children: [
+                                            const MissionCard(),
+                                            const SizedBox(height: 10),
+                                            Text(
+                                              t.modoTreino, // Substitua ou crie chaves arb equivalentes se necessário
+                                              style: const TextStyle(
+                                                color: Colors.white70, 
+                                                fontSize: 11, 
+                                                fontWeight: FontWeight.bold, 
+                                                letterSpacing: 1.2
+                                              )
+                                            ),
+                                            const SizedBox(height: 8),
+                                            GameModeButton(
+                                              titulo: t.modoTreino, 
+                                              subtitulo: "Jogue sem pressão, sem perder vidas", 
+                                              cor: AppColors.neonCiano, 
+                                              onPressed: () => _navegarParaJogo(context, 'treino')
+                                            ),
+                                            const SizedBox(height: 8),
+                                            GameModeButton(
+                                              titulo: t.modoDisputa, 
+                                              subtitulo: "Corra contra o tempo (2x XP)", 
+                                              cor: Colors.amber, 
+                                              onPressed: () => _navegarParaJogo(context, 'disputa')
+                                            ),
+                                            const SizedBox(height: 8),
+                                            GameModeButton(
+                                              titulo: t.rankingGlobal, 
+                                              subtitulo: "Veja sua posição entre os melhores", 
+                                              cor: const Color(0xFF7CFFB2), 
+                                              onPressed: () => Navigator.push(
+                                                context, 
+                                                MaterialPageRoute(builder: (_) => const RankingScreen())
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -187,6 +233,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // --- BOTÃO DE SELEÇÃO DE IDIOMA ---
+  Widget _buildLanguageButton(BuildContext context) {
+    return PopupMenuButton<Locale>(
+      icon: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: const Icon(Icons.language, color: Colors.white, size: 22),
+      ),
+      color: const Color(0xFF1E1E1E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (Locale novoLocale) {
+        // Altera o idioma e aciona o redesenho global da tela
+        context.read<GameState>().mudarIdioma(novoLocale);
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<Locale>>[
+        const PopupMenuItem<Locale>(
+          value: Locale('pt', 'BR'),
+          child: Text('🇧🇷 Português', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem<Locale>(
+          value: Locale('en', 'US'),
+          child: Text('🇺🇸 English', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
   void _navegarParaJogo(BuildContext context, String modo) {
     final gs = context.read<GameState>();
     if (modo == 'disputa') {
@@ -195,7 +272,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         gs.notifyListeners();
         Navigator.pushNamed(context, AppRoutes.perfil, arguments: {'modo': modo, 'isModoDisputa': true});
       } else {
-        showDialog(context: context, builder: (_) => AlertDialog(title: const Text("Ops! Sem vidas 💔"), content: const Text("Visite a Loja!"), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))]));
+        showDialog(
+          context: context, 
+          builder: (_) => AlertDialog(
+            title: const Text("Ops! Sem vidas 💔"), 
+            content: const Text("Visite a Loja!"), 
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context), 
+                child: const Text("OK")
+              )
+            ]
+          )
+        );
       }
     } else {
       Navigator.pushNamed(context, AppRoutes.perfil, arguments: {'modo': modo, 'isModoDisputa': false});
@@ -208,7 +297,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
-          debugPrint("DEBUG: Botão de saída clicado na HomeScreen!");
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
             (route) => false,
@@ -222,39 +310,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           });
         },
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.5), 
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white24),
           ),
-          child: const Icon(Icons.exit_to_app, color: Colors.white, size: 24),
+          child: const Icon(Icons.exit_to_app, color: Colors.white, size: 22),
         ),
       ),
-    );
-  }
-
-  Widget _buildRankingButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7CFFB2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RankingScreen())),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("RANKING GLOBAL", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackgroundGlow() {
-    return Positioned(
-      top: -120, right: -120,
-      child: Container(width: 320, height: 320, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.neonCiano.withValues(alpha: 0.12))),
     );
   }
 }

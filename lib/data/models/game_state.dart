@@ -19,6 +19,9 @@ class GameState extends ChangeNotifier {
   int _tempoAcumuladoDoNivelAtual = 0;
   bool _temPartidaSalva = false;
   
+  // Armazena o idioma atual do app (Padrão: Português do Brasil)
+  Locale _currentLocale = const Locale('pt', 'BR');
+
   // Armazena os recordes mapeados por perfil e nível
   Map<String, int> _melhoresTemposPorPerfil = {};
   Map<String, int> _xpPorPerfil = {'crianca': 0, 'adulto': 0, 'professor': 0};
@@ -37,6 +40,13 @@ class GameState extends ChangeNotifier {
     progressoMissaoDiaria = prefs.getInt('progresso_missao') ?? 0;
     _temPartidaSalva = prefs.getBool('tem_partida_salva') ?? false;
     
+    // Carrega o idioma salvo anteriormente, se houver
+    String? languageCode = prefs.getString('language_code');
+    String? countryCode = prefs.getString('country_code');
+    if (languageCode != null) {
+      _currentLocale = Locale(languageCode, countryCode);
+    }
+
     for (var p in ['crianca', 'adulto', 'professor']) {
       for (var nivel in Nivel.values) {
         String chave = '${p}_${nivel.name}';
@@ -57,6 +67,9 @@ class GameState extends ChangeNotifier {
   String get nivelParaService => nivelAtual.name;
   String get nomeNivelExibicao => nivelAtual.name.toUpperCase();
   bool get acessibilidadeAtiva => acessibilidadeVoz;
+  
+  // Getter para o idioma atual
+  Locale get currentLocale => _currentLocale;
 
   Map<String, int> get recordesPorNivel {
     Map<String, int> mapPerfil = {};
@@ -67,6 +80,17 @@ class GameState extends ChangeNotifier {
   }
 
   Map<String, String> get nomesRecordesPorNivel => {};
+
+  // --- MÉTODO PARA ALTERAR E SALVAR O IDIOMA ---
+  Future<void> mudarIdioma(Locale novoLocale) async {
+    _currentLocale = novoLocale;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language_code', novoLocale.languageCode);
+    if (novoLocale.countryCode != null) {
+      await prefs.setString('country_code', novoLocale.countryCode!);
+    }
+    notifyListeners();
+  }
 
   // --- MÉTODOS AUXILIARES E FORMATAÇÕES ---
   String formatarMinutos(int s) => "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
@@ -104,7 +128,6 @@ class GameState extends ChangeNotifier {
 
   int obterTempoDaFase(int fase) => _temposPorFase[fase] ?? 0;
 
-  // --- NOVO: MÉTODO PARA RETORNAR O TEMPO TOTAL DO NÍVEL ---
   int obterTempoTotalNivel(String nivelNome) {
     String chave = '${perfil.toLowerCase()}_$nivelNome';
     return _melhoresTemposPorPerfil[chave] ?? 0;
