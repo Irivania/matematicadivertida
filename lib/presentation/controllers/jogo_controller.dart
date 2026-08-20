@@ -32,10 +32,10 @@ class JogoController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> falar(String pergunta) async {
+  /// Método universal para falar a pergunta considerando o idioma ativo (Português ou Inglês)
+  Future<void> falar(String pergunta, {bool eIngles = false}) async {
     if (pergunta.trim().isEmpty) return;
     
-    // Evita loop se for a mesma pergunta exata enquanto já fala
     if (pergunta == _ultimaPerguntaFalada && _estaFalandoAgora) return;
     
     _ultimaPerguntaFalada = pergunta;
@@ -43,47 +43,53 @@ class JogoController extends ChangeNotifier {
     
     try {
       await _flutterTts.stop();
-      if (kIsWeb) {
-        await Future.delayed(const Duration(milliseconds: 150));
-        await _flutterTts.setLanguage("pt-BR");
-      }
+      
+      // Define o idioma correto do TTS
+      final codigoIdioma = eIngles ? "en-US" : "pt-BR";
+      await _flutterTts.setLanguage(codigoIdioma);
 
-      // Remove palavras duplicadas como "quanto é" ou interrogações caso já venham na string
+      // Limpa termos em português ou inglês caso já venham na string
       String perguntaLimpa = pergunta
-          .replaceAll(RegExp(r'(quanto é|quanto e|\?)', caseSensitive: false), '')
+          .replaceAll(RegExp(r'(quanto é|quanto e|what is|whats is|\?)', caseSensitive: false), '')
           .trim();
 
+      // Substitui os operadores matemáticos para a leitura correta em voz alta
       String textoParaFalar = perguntaLimpa
-          .replaceAll('+', ' mais ')
-          .replaceAll('-', ' menos ')
-          .replaceAll('x', ' vezes ')
-          .replaceAll('/', ' dividido por ');
+          .replaceAll('+', eIngles ? ' plus ' : ' mais ')
+          .replaceAll('-', eIngles ? ' minus ' : ' menos ')
+          .replaceAll('x', eIngles ? ' times ' : ' vezes ')
+          .replaceAll('/', eIngles ? ' divided by ' : ' dividido por ');
 
-      await _flutterTts.speak("Quanto é $textoParaFalar ?");
+      // Monta a frase de acordo com o idioma ativo
+      String fraseFinal = eIngles 
+          ? "What is $textoParaFalar ?" 
+          : "Quanto é $textoParaFalar ?";
+
+      await _flutterTts.speak(fraseFinal);
     } catch (e) {
       _estaFalandoAgora = false;
       print("Erro no TTS: $e");
     }
   }
 
-  /// Reseta a trava e força a fala da nova pergunta
-  void prepararProximaPergunta(String novaPergunta) {
+  /// Reseta a trava e força a fala da nova pergunta repassando o idioma
+  void prepararProximaPergunta(String novaPergunta, {bool eIngles = false}) {
     if (_ultimaPerguntaFalada != novaPergunta) {
       _ultimaPerguntaFalada = ""; 
-      falar(novaPergunta);
+      falar(novaPergunta, eIngles: eIngles);
     } else {
-      // Caso seja a mesma string por algum motivo, força a releitura limpando a trava
       _ultimaPerguntaFalada = "";
-      falar(novaPergunta);
+      falar(novaPergunta, eIngles: eIngles);
     }
   }
 
-  Future<void> falarFeedbackSistema(String mensagem) async {
+  Future<void> falarFeedbackSistema(String mensagem, {bool eIngles = false}) async {
     if (mensagem.trim().isEmpty) return;
     _estaFalandoAgora = true;
     try {
       await _flutterTts.stop();
       await Future.delayed(const Duration(milliseconds: 100));
+      await _flutterTts.setLanguage(eIngles ? "en-US" : "pt-BR");
       await _flutterTts.speak(mensagem);
     } catch (_) {}
   }
@@ -91,6 +97,7 @@ class JogoController extends ChangeNotifier {
   Future<void> alternarMicrofone({
     required Function(String) onTextoCapturado,
     required VoidCallback onFinalizado,
+    bool eIngles = false,
   }) async {
     if (_estaFalandoAgora) return;
 
@@ -110,7 +117,7 @@ class JogoController extends ChangeNotifier {
               onFinalizado();
             }
           },
-          localeId: "pt_BR",
+          localeId: eIngles ? "en_US" : "pt_BR", // Suporta reconhecimento em inglês ou português
         );
       }
     } else {

@@ -5,5 +5,7 @@
   "rankingGlobal": "GLOBAL RANKING 🌍",
   "boasVindas": "HELLO, {nome}!",
   "missaoDiaria": "DAILY MISSION 🎯",
-  "progressoQuestao": "questions - Complete to earn 200 XP"
+  "missaoConcluida": "MISSION COMPLETED! 🎉",
+  "recompensaRecebida": "Reward received: +200 XP! Come back tomorrow! 📅",
+  "progressoQuestao": "{atual}/{meta} questions - Complete to earn 200 XP"
 }

@@ -141,11 +141,17 @@ class JogoFlowService {
   void gerarPergunta() {
     try {
       final gameState = context.read<GameState>();
+      
+      // Captura o idioma atual selecionado ('pt' ou 'en')
+      String idiomaAtual = gameState.currentLocale.languageCode;
+
       final pergunta = perguntaService.gerar(
         perfil: perfil,
         nivel: gameState.nivelParaService,
         fase: gameState.fase,
+        languageCode: idiomaAtual, // <--- Envia o idioma para o PerguntaService
       );
+      
       if (pergunta.pergunta == ultimaPergunta) return;
       perguntaAtual = pergunta;
       ultimaPergunta = pergunta.pergunta;

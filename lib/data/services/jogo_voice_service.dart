@@ -9,7 +9,7 @@ class JogoVoiceService {
   JogoVoiceService();
 
   // =========================
-  // LER PERGUNTA
+  // LER PERGUNTA (Com suporte a idioma)
   // =========================
   Future<void> iniciarLeituraPergunta({
     required JogoController jogoController,
@@ -17,11 +17,15 @@ class JogoVoiceService {
     required String pergunta,
     required bool jogoAtivo,
     required VoidCallback onAcionarMicrofone,
+    String? idioma,
   }) async {
     jogoController.pararMicrofone();
 
-    // Usa a preparação inteligente para evitar duplicar ou travar na 5ª pergunta
-    jogoController.prepararProximaPergunta(pergunta);
+    // Descobre se o idioma atual é inglês
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
+
+    // Prepara e lê a pergunta passando o parâmetro de idioma para o JogoController
+    jogoController.prepararProximaPergunta(pergunta, eIngles: eIngles);
 
     if (!kIsWeb && jogoAtivo && gameState.acessibilidadeVoz) {
       Future.delayed(
@@ -43,7 +47,10 @@ class JogoVoiceService {
   }) {
     if (!jogoAtivo) return;
 
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
+
     jogoController.alternarMicrofone(
+      eIngles: eIngles,
       onTextoCapturado: (textoReconhecido) {
         final textoNormalizado = gameState.normalizarRespostaFalada(
           textoReconhecido,
@@ -58,8 +65,9 @@ class JogoVoiceService {
   // =========================
   // FALAR FEEDBACK
   // =========================
-  Future<void> falarFeedback(JogoController jogoController, String texto) async {
-    await jogoController.falarFeedbackSistema(texto);
+  Future<void> falarFeedback(JogoController jogoController, GameState gameState, String texto) async {
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
+    await jogoController.falarFeedbackSistema(texto, eIngles: eIngles);
   }
 
   // =========================
@@ -82,16 +90,13 @@ class JogoVoiceService {
   }) {
     gameState.alternarAcessibilidadeVoz();
 
-    // Ativou
     if (gameState.acessibilidadeVoz) {
       jogoController.resetarTrava();
 
       if (jogoAtivo && perguntaAtual != null) {
         onRelerPergunta();
       }
-    }
-    // Desativou
-    else {
+    } else {
       pararTudo(jogoController);
     }
   }

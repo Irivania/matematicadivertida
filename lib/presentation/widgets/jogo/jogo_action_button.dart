@@ -1,7 +1,9 @@
 // lib/presentation/widgets/jogo/jogo_action_button.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/game_state.dart';
 
 class JogoActionButton extends StatelessWidget {
   final bool jogoAtivo;
@@ -45,7 +47,7 @@ class JogoActionButton extends StatelessWidget {
                 child: Icon(Icons.stop_circle, color: AppColors.backgroundEscuro),
               ),
             Text(
-              _obterTextoBotao(),
+              _obterTextoBotao(context),
               style: const TextStyle(
                 color: AppColors.backgroundEscuro,
                 fontWeight: FontWeight.bold,
@@ -59,19 +61,22 @@ class JogoActionButton extends StatelessWidget {
   }
 
   // =========================
-  // TEXTO
+  // TEXTO COM SUPORTE A IDIOMA
   // =========================
 
-  String _obterTextoBotao() {
+  String _obterTextoBotao(BuildContext context) {
+    final gs = context.watch<GameState>();
+    final bool eIngles = gs.currentLocale.languageCode == 'en';
+
     if (estaOuvindo) {
-      return "OUVINDO...";
+      return eIngles ? "LISTENING..." : "OUVINDO...";
     }
 
     if (jogoAtivo) {
-      return "CONFIRMAR";
+      return eIngles ? "VERIFY" : "CONFIRMAR"; // ou "SUBMIT"
     }
 
-    return "COMEÇAR AGORA";
+    return eIngles ? "START NOW" : "COMEÇAR AGORA";
   }
 
   // =========================

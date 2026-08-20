@@ -29,5 +29,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get missaoDiaria => 'DAILY MISSION 🎯';
 
   @override
-  String get progressoQuestao => 'questions - Complete to earn 200 XP';
+  String get missaoConcluida => 'MISSION COMPLETED! 🎉';
+
+  @override
+  String get recompensaRecebida =>
+      'Reward received: +200 XP! Come back tomorrow! 📅';
+
+  @override
+  String progressoQuestao(Object atual, Object meta) {
+    return '$atual/$meta questions - Complete to earn 200 XP';
+  }
+
+  @override
+  String get perguntaLabel => 'Pergunta';
+
+  @override
+  String get deLabel => 'de';
+
+  @override
+  String get botaoContinuar => 'CONTINUAR';
+
+  @override
+  String get botaoEntendi => 'ENTENDI';
+
+  @override
+  String get continuarPartida => 'Continuar Partida';
+
+  @override
+  String get botaoComecar => 'COMEÇAR';
 }

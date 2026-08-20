@@ -1,5 +1,8 @@
+// lib/presentation/screens/trilha_screen.dart
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
+import '../../data/models/game_state.dart';
 
 class TrilhaScreen extends StatefulWidget {
   const TrilhaScreen({super.key});
@@ -49,7 +52,6 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
     });
 
     try {
-      // Certifique-se de que o arquivo existe em assets/sons/conquista.mp3
       await _audioPlayer.play(AssetSource('sons/conquista.mp3'));
     } catch (e) {
       debugPrint("Erro ao tocar som: $e");
@@ -69,6 +71,8 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final gs = context.watch<GameState>();
+    final bool eIngles = gs.currentLocale.languageCode == 'en';
 
     return Scaffold(
       body: Stack(
@@ -98,7 +102,6 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
               child: Stack(
                 children: [
                   // LINHA DA TRILHA
-                  // Removido 'const' pois depende do Painter que recebe funções dinâmicas
                   CustomPaint(
                     size: Size(larguraTrilha, size.height),
                     painter: TrilhaPainter(
@@ -124,6 +127,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
                         numero: entry.value["numero"],
                         faseAtual: faseAtual,
                         icone: entry.value["icone"],
+                        eIngles: eIngles,
                         onTap: concluirFase,
                       ),
                     );
@@ -133,8 +137,8 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
             ),
           ),
 
-          // 4. OVERLAY DE SUCESSO
-          if (mostrarConfete) _buildSuccessOverlay(),
+          // 4. OVERLAY DE SUCESSO TRADUZIDO
+          if (mostrarConfete) _buildSuccessOverlay(eIngles),
         ],
       ),
     );
@@ -149,7 +153,7 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
     );
   }
 
-  Widget _buildSuccessOverlay() {
+  Widget _buildSuccessOverlay(bool eIngles) {
     return Container(
       color: Colors.black26,
       child: Center(
@@ -163,14 +167,19 @@ class _TrilhaScreenState extends State<TrilhaScreen> {
           child: Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             elevation: 10,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("🎉", style: TextStyle(fontSize: 60)),
-                  Text("Incrível!", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                  Text("Você avançou na trilha!"),
+                  const Text("🎉", style: TextStyle(fontSize: 60)),
+                  Text(
+                    eIngles ? "Awesome!" : "Incrível!", 
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    eIngles ? "You advanced on the trail!" : "Você avançou na trilha!",
+                  ),
                 ],
               ),
             ),
@@ -187,6 +196,7 @@ class FaseWidget extends StatelessWidget {
   final int numero;
   final int faseAtual;
   final String icone;
+  final bool eIngles;
   final Function(int) onTap;
 
   const FaseWidget({
@@ -194,6 +204,7 @@ class FaseWidget extends StatelessWidget {
     required this.numero,
     required this.faseAtual,
     required this.icone,
+    required this.eIngles,
     required this.onTap,
   });
 
@@ -215,7 +226,7 @@ class FaseWidget extends StatelessWidget {
               border: Border.all(color: Colors.white, width: 4),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 )
@@ -230,7 +241,7 @@ class FaseWidget extends StatelessWidget {
           ),
           const SizedBox(height: 5),
           Text(
-            "Fase $numero",
+            eIngles ? "Phase $numero" : "Fase $numero",
             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
           ),
         ],
@@ -263,7 +274,7 @@ class MascoteAnimado extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Colors.white.withOpacity(0.8),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -285,7 +296,7 @@ class TrilhaPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.orange.withValues(alpha: 0.6)
+      ..color = Colors.orange.withOpacity(0.6)
       ..strokeWidth = 12
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

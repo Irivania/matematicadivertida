@@ -33,6 +33,10 @@ class GameState extends ChangeNotifier {
   final int metaMissaoDiaria = 10;
   bool acessibilidadeVoz = false;
 
+  // --- SISTEMA DE COSMÉTICOS DO CAL ---
+  final Set<String> trajesDesbloqueados = {'padrao'};
+  String trajeAtual = 'padrao';
+
   GameState() { _carregarEstadoInicial(); }
 
   Future<void> _carregarEstadoInicial() async {
@@ -46,6 +50,14 @@ class GameState extends ChangeNotifier {
     if (languageCode != null) {
       _currentLocale = Locale(languageCode, countryCode);
     }
+
+    // Carrega trajes salvos do Cal
+    List<String>? trajesSalvos = prefs.getStringList('trajes_desbloqueados');
+    if (trajesSalvos != null) {
+      trajesDesbloqueados.clear();
+      trajesDesbloqueados.addAll(trajesSalvos);
+    }
+    trajeAtual = prefs.getString('traje_atual') ?? 'padrao';
 
     for (var p in ['crianca', 'adulto', 'professor']) {
       for (var nivel in Nivel.values) {
@@ -110,11 +122,45 @@ class GameState extends ChangeNotifier {
   void zerarTempoAoPassarDeNivel() { _tempoAcumuladoDoNivelAtual = 0; notifyListeners(); }
   void alternarAcessibilidadeVoz() { acessibilidadeVoz = !acessibilidadeVoz; notifyListeners(); }
   
+  // --- NOVO MÉTODO PARA REINICIAR O JOGO DO ZERO ---
+  void reiniciarJogoAtual() {
+    faseAtual = 1;
+    perguntaAtual = 1;
+    _tempoAcumuladoDoNivelAtual = 0;
+    limparProgresso(); // Apaga o salvamento automático das preferências
+    notifyListeners();
+  }
+  
   bool comprarVidaExtra() {
     if (pontos >= 500) {
       _xpPorPerfil[perfil.toLowerCase()] = pontos - 500;
       vidas++; 
       notifyListeners(); 
+      return true;
+    }
+    return false;
+  }
+
+  // --- LÓGICA DE COMPRA E EQUIPAMENTO DOS TRAJES DO CAL ---
+  Future<bool> comprarTraje(String idTraje, int custo) async {
+    if (trajesDesbloqueados.contains(idTraje)) {
+      trajeAtual = idTraje;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('traje_atual', trajeAtual);
+      notifyListeners();
+      return true;
+    }
+    
+    if (pontos >= custo) {
+      _xpPorPerfil[perfil.toLowerCase()] = pontos - custo;
+      trajesDesbloqueados.add(idTraje);
+      trajeAtual = idTraje;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('trajes_desbloqueados', trajesDesbloqueados.toList());
+      await prefs.setString('traje_atual', trajeAtual);
+      
+      notifyListeners();
       return true;
     }
     return false;
@@ -153,6 +199,7 @@ class GameState extends ChangeNotifier {
             uid: '${user.uid}_${perfil.toLowerCase()}',
             nome: nomeUsuario,
             nivel: '$nivelNome (${perfil.toUpperCase()})',
+            perfil: perfil,
             tempo: tempo,
           );
         }
@@ -171,19 +218,24 @@ class GameState extends ChangeNotifier {
     return "🥉 Bronze";
   }
 
+  // --- FLUXO AJUSTADO PARA AVANÇAR DIRETO ATÉ A FASE 10 ---
   void concluirEAvancarFase() {
     registrarTempoFase(faseAtual, _tempoAcumuladoDoNivelAtual);
 
-    if (faseAtual < EstruturaProgresso.fasesPorNivel) {
+    // Se ainda não chegou na última fase (10), avança direto sem pausa
+    if (faseAtual < 10) {
       faseAtual++;
+      perguntaAtual = 1;
+      limparProgresso();
     } else { 
+      // Completou a fase 10, salva o recorde do nível e reinicia para o próximo nível
       salvarRecorde(nivelAtual.name, _tempoAcumuladoDoNivelAtual);
       _subirNivel(); 
       faseAtual = 1; 
+      perguntaAtual = 1;
       zerarTempoAoPassarDeNivel(); 
+      limparProgresso();
     }
-    perguntaAtual = 1;
-    limparProgresso();
     notifyListeners();
   }
 

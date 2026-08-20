@@ -1,5 +1,9 @@
+// lib/presentation/widgets/jogo/mensagem_dialog_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:matematicadivertida/l10n/app_localizations.dart';
+import '../../../data/models/game_state.dart';
 
 class MensagemDialogWidget extends StatelessWidget {
   final String titulo;
@@ -17,6 +21,9 @@ class MensagemDialogWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<GameState>();
+    AppLocalizations.of(context)!;
+
     return Positioned.fill(
       child: Container(
         color: Colors.black87,

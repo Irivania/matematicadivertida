@@ -134,11 +134,59 @@ abstract class AppLocalizations {
   /// **'MISSÃO DIÁRIA 🎯'**
   String get missaoDiaria;
 
+  /// No description provided for @missaoConcluida.
+  ///
+  /// In pt, this message translates to:
+  /// **'MISSÃO CONCLUÍDA! 🎉'**
+  String get missaoConcluida;
+
+  /// No description provided for @recompensaRecebida.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recompensa recebida: +200 XP! Volte amanhã! 📅'**
+  String get recompensaRecebida;
+
   /// No description provided for @progressoQuestao.
   ///
   /// In pt, this message translates to:
-  /// **'questões - Complete para ganhar 200 XP'**
-  String get progressoQuestao;
+  /// **'{atual}/{meta} questões - Complete para ganhar 200 XP'**
+  String progressoQuestao(Object atual, Object meta);
+
+  /// No description provided for @perguntaLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pergunta'**
+  String get perguntaLabel;
+
+  /// No description provided for @deLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'de'**
+  String get deLabel;
+
+  /// No description provided for @botaoContinuar.
+  ///
+  /// In pt, this message translates to:
+  /// **'CONTINUAR'**
+  String get botaoContinuar;
+
+  /// No description provided for @botaoEntendi.
+  ///
+  /// In pt, this message translates to:
+  /// **'ENTENDI'**
+  String get botaoEntendi;
+
+  /// No description provided for @continuarPartida.
+  ///
+  /// In pt, this message translates to:
+  /// **'Continuar Partida'**
+  String get continuarPartida;
+
+  /// No description provided for @botaoComecar.
+  ///
+  /// In pt, this message translates to:
+  /// **'COMEÇAR'**
+  String get botaoComecar;
 }
 
 class _AppLocalizationsDelegate

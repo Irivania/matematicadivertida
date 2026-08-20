@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // <- Necessário para i18n
-import 'package:matematicadivertida/l10n/app_localizations.dart'; // <- Caminho direto corrigido para o Web
+import 'package:flutter_localizations/flutter_localizations.dart'; 
+import 'package:matematicadivertida/l10n/app_localizations.dart'; 
 
 // Configuração do Firebase
 import 'package:matematicadivertida/core/config/firebase_options.dart';
@@ -22,10 +22,8 @@ import 'package:matematicadivertida/presentation/screens/home_screen.dart';
 import 'package:matematicadivertida/presentation/routes/app_routes.dart';
 
 void main() async {
-  // Garante que os bindings do Flutter estejam prontos
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicialização do Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -33,24 +31,15 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        // 1. Serviço de Autenticação
         Provider<AuthService>(create: (_) => AuthService()),
-
-        // 2. Repositório de Auth
         ProxyProvider<AuthService, IAuthRepository>(
           update: (_, authService, __) => AuthRepositoryImpl(authService),
         ),
-
-        // 3. Controlador de Autenticação
         ChangeNotifierProxyProvider<IAuthRepository, AuthController>(
           create: (context) => AuthController(context.read<IAuthRepository>()),
           update: (_, repository, controller) => controller ?? AuthController(repository),
         ),
-
-        // 4. Estado Global do Jogo (Score, Nível, etc)
         ChangeNotifierProvider<GameState>(create: (_) => GameState()),
-
-        // 5. Controlador Unificado do Jogo e Voz (TTS e Microfone)
         ChangeNotifierProvider<JogoController>(create: (_) => JogoController()),
       ],
       child: const MeuApp(),
@@ -63,12 +52,15 @@ class MeuApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Escuta o GameState para capturar a alteração de idioma globalmente
+    final gs = context.watch<GameState>();
+
     return MaterialApp(
+      key: ValueKey(gs.currentLocale), // <--- ESSENCIAL: Força a recriação do app ao mudar o idioma
       title: 'Matemática Divertida',
       debugShowCheckedModeBanner: false,
       
-      // CONFIGURAÇÕES DE INTERNACIONALIZAÇÃO (i18n) CONECTADAS AO GAMESTATE:
-      locale: context.watch<GameState>().currentLocale, // <- Controla o idioma dinamicamente
+      locale: gs.currentLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
 
@@ -77,11 +69,9 @@ class MeuApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF121212),
         primaryColor: Colors.cyan,
       ),
-      // Uso da navegação dinâmica que você já configurou
       onGenerateRoute: AppRoutes.onGenerateRoute,
       home: Consumer<AuthController>(
         builder: (context, authController, _) {
-          // Exibe loader enquanto verifica o estado da sessão
           if (authController.isLoading && authController.usuarioAtual == null) {
             return const Scaffold(
               body: Center(
@@ -92,7 +82,6 @@ class MeuApp extends StatelessWidget {
             );
           }
 
-          // Rota inicial baseada no status de autenticação
           if (authController.estaAutenticado) {
             return const HomeScreen();
           }

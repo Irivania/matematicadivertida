@@ -1,3 +1,4 @@
+// lib/data/services/audio_voice_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -26,7 +27,7 @@ class AudioVoiceService extends ChangeNotifier {
       await _tts.setLanguage("pt-BR");
       await _tts.setSpeechRate(0.5); 
       await _tts.setPitch(1.1);       
-      await _tts.setVolume(1.0);     
+      await _tts.setVolume(1.0);    
       await _tts.awaitSpeakCompletion(true);
 
       _speechEnabled = await _stt.initialize(
@@ -40,33 +41,32 @@ class AudioVoiceService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Interrompe a fala anterior e inicia a leitura da nova pergunta de forma segura para o navegador
-  Future<void> falarProximaPergunta(String pergunta) async {
+  /// Interrompe a fala anterior e inicia a leitura da nova pergunta adaptada ao idioma ("en-US" ou "pt-BR")
+  Future<void> falarProximaPergunta(String pergunta, {String idioma = "pt-BR"}) async {
     if (pergunta.isNotEmpty) {
       try {
         await _tts.stop(); 
         
-        // Pequeno respiro para limpar o buffer de áudio do navegador e evitar falhas de SpeechSynthesis
+        // Pequeno respiro para limpar o buffer de áudio
         await Future.delayed(const Duration(milliseconds: 150));
 
-        if (kIsWeb) {
-          await _tts.setLanguage("pt-BR");
-        }
+        // Define o idioma dinamicamente (seja Web ou Mobile)
+        await _tts.setLanguage(idioma);
 
         var resultado = await _tts.speak(pergunta);
         if (resultado == 1) {
-          print("Nova pergunta reproduzida com sucesso.");
+          print("Nova pergunta reproduzida com sucesso no idioma: $idioma.");
         } else {
           print("Falha ao reproduzir nova pergunta.");
         }
       } catch (e) {
-        print("Erro capturado no TTS do navegador: $e");
+        print("Erro capturado no TTS: $e");
       }
     }
   }
 
-  Future<void> falarPergunta(String pergunta) async {
-    await falarProximaPergunta(pergunta);
+  Future<void> falarPergunta(String pergunta, {String idioma = "pt-BR"}) async {
+    await falarProximaPergunta(pergunta, idioma: idioma);
   }
 
   Future<void> pararFala() async {
@@ -85,7 +85,7 @@ class AudioVoiceService extends ChangeNotifier {
     }
   }
 
-  Future<void> iniciarEscuta(Function(int? numero) onNumeroRecebido) async {
+  Future<void> iniciarEscuta(Function(int? numero) onNumeroRecebido, {String localeId = "pt_BR"}) async {
     if (!_speechEnabled) {
       print("O reconhecimento de voz não está disponível ou não foi autorizado.");
       return;
@@ -96,7 +96,7 @@ class AudioVoiceService extends ChangeNotifier {
     notifyListeners();
 
     await _stt.listen(
-      localeId: "pt_BR",
+      localeId: localeId, // Suporta alternar entre "pt_BR" e "en_US"
       listenMode: ListenMode.confirmation,
       onResult: (result) {
         _wordsSpoken = result.recognizedWords;
@@ -125,12 +125,20 @@ class AudioVoiceService extends ChangeNotifier {
     int? numeroDireto = int.tryParse(textoLimpo);
     if (numeroDireto != null) return numeroDireto;
 
+    // Mapa expandido para suportar números em Português e Inglês
     const mapaNumeros = {
+      // Português
       'zero': 0, 'um': 1, 'dois': 2, 'três': 3, 'tres': 3, 'quatro': 4,
       'cinco': 5, 'seis': 6, 'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
       'onze': 11, 'doze': 12, 'treze': 13, 'quatorze': 14, 'catorze': 14,
       'quinze': 15, 'dezesseis': 16, 'dezessete': 17, 'dezoito': 18, 
-      'dezenove': 19, 'vinte': 20, 'trinta': 30, 'quarenta': 40, 'cinquenta': 50
+      'dezenove': 19, 'vinte': 20, 'trinta': 30, 'quarenta': 40, 'cinquenta': 50,
+      // Inglês
+      'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
+      'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+      'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14,
+      'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 
+      'nineteen': 19, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50
     };
 
     return mapaNumeros[textoLimpo];

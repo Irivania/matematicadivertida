@@ -1,5 +1,6 @@
 // lib/presentation/widgets/jogo/hud_widget.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../data/models/game_state.dart';
 
 class HUDWidget extends StatelessWidget {
@@ -16,6 +17,10 @@ class HUDWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Escuta o idioma para atualizar dinamicamente
+    final gs = context.watch<GameState>();
+    final bool eIngles = gs.currentLocale.languageCode == 'en';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
@@ -30,11 +35,11 @@ class HUDWidget extends StatelessWidget {
         children: [
           _buildItemFase(),
           
-          // Tempo: Agora usa formatarMinutos para ambos os modos
+          // Tempo: Traduz o rótulo dependendo do idioma
           _buildItem(
             Icons.timer, 
-            "TIME", 
-            state.formatarMinutos(tempoRestante), // Formato 00:00 padronizado
+            eIngles ? "TIME" : "TEMPO", 
+            state.formatarMinutos(tempoRestante), 
             destaque: true
           ),
           

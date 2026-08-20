@@ -1,9 +1,18 @@
 {
+  "@@locale": "pt",
   "tituloLoja": "Loja",
   "modoTreino": "MODO TREINO 📚",
   "modoDisputa": "MODO DISPUTA 🏆",
   "rankingGlobal": "RANKING GLOBAL 🌍",
   "boasVindas": "OLÁ, {nome}!",
   "missaoDiaria": "MISSÃO DIÁRIA 🎯",
-  "progressoQuestao": "questões - Complete para ganhar 200 XP"
+  "missaoConcluida": "MISSÃO CONCLUÍDA! 🎉",
+  "recompensaRecebida": "Recompensa recebida: +200 XP! Volte amanhã! 📅",
+  "progressoQuestao": "{atual}/{meta} questões - Complete para ganhar 200 XP",
+  "perguntaLabel": "Pergunta",
+  "deLabel": "de",
+  "botaoContinuar": "CONTINUAR",
+  "botaoEntendi": "ENTENDI",
+  "continuarPartida": "Continuar Partida",
+  "botaoComecar": "COMEÇAR"
 }

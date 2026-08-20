@@ -1,7 +1,9 @@
 // lib/presentation/widgets/jogo/area_pergunta.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../data/models/pergunta.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/game_state.dart';
 
 class AreaPerguntaWidget extends StatelessWidget {
   final Pergunta? perguntaAtual;
@@ -25,18 +27,24 @@ class AreaPerguntaWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!jogoAtivo) return const SizedBox.shrink();
 
+    // Escuta o idioma para alternar dinamicamente
+    final gs = context.watch<GameState>();
+    final bool eIngles = gs.currentLocale.languageCode == 'en';
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        // PERGUNTA MAIS ACIMA E COM FONTE COMPACTA
         Text(
           perguntaAtual?.pergunta ?? "",
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 48,
+            fontSize: 26, // Reduzido para subir e otimizar o espaço
             fontWeight: FontWeight.bold,
-            shadows: [Shadow(color: Colors.black45, blurRadius: 10)],
+            shadows: [Shadow(color: Colors.black45, blurRadius: 6)],
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 10), // Espaçamento reduzido ao máximo
 
         // Campo de resposta com foco automático
         Padding(
@@ -51,37 +59,42 @@ class AreaPerguntaWidget extends StatelessWidget {
             onSubmitted: (_) => onValidar(),
             style: TextStyle(
               color: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
-              fontSize: 32,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
             decoration: InputDecoration(
-              hintText: 'Sua resposta',
-              hintStyle: const TextStyle(color: Colors.white30),
+              hintText: eIngles ? 'Your answer' : 'Sua resposta',
+              hintStyle: const TextStyle(color: Colors.white30, fontSize: 18),
               filled: true,
               fillColor: Colors.white.withOpacity(0.1),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10), // Espaçamento reduzido ao máximo
 
+        // Botão de validação traduzido
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: SizedBox(
             width: double.infinity,
-            height: 60,
+            height: 48,
             child: ElevatedButton(
               onPressed: onValidar,
               style: ElevatedButton.styleFrom(
                 backgroundColor: disputaAtiva ? Colors.purpleAccent : AppColors.neonCiano,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
               ),
               child: Text(
-                disputaAtiva ? 'ENVIAR RESPOSTA' : 'VERIFICAR APRENDIZADO',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                disputaAtiva 
+                  ? (eIngles ? 'SUBMIT ANSWER' : 'ENVIAR RESPOSTA') 
+                  : (eIngles ? 'CHECK LEARNING' : 'VERIFICAR APRENDIZADO'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ),
           ),

@@ -17,21 +17,21 @@ class _HomeHeaderState extends State<HomeHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final authController = Provider.of<AuthController>(context);
-    String nomeSalvo = authController.usuarioAtual?.nomeExibicao ?? authController.nomeJogador;
+    final authController = context.watch<AuthController>();
+    String nomeExibicao = authController.nomeJogador;
 
     if (_isEditing) {
-      return _buildEditMode(authController, nomeSalvo);
+      return _buildEditMode(authController, nomeExibicao);
     }
 
-    return _buildViewMode(nomeSalvo);
+    return _buildViewMode(nomeExibicao);
   }
 
   Widget _buildViewMode(String nome) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85), // Fundo translúcido elegante
+        color: Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.black12),
         boxShadow: [
@@ -115,13 +115,12 @@ class _HomeHeaderState extends State<HomeHeader> {
               const SizedBox(width: 8),
               IconButton.filled(
                 style: IconButton.styleFrom(backgroundColor: AppColors.neonCiano),
-                onPressed: () async {
-                  final nomeDigitado = _nomeController.text.trim();
-                  if (nomeDigitado.isNotEmpty) {
-                    await authController.escolherPerfilParaJogar(
-                      nome: nomeDigitado,
-                      perfilEscolhido: "crianca",
-                    );
+                onPressed: () {
+                  final novoNome = _nomeController.text.trim();
+                  if (novoNome.isNotEmpty) {
+                    // CHAMADA CORRETA DO MÉTODO QUE CRIAMOS NO AUTHCONTROLLER
+                    authController.atualizarNomeJogador(novoNome);
+                    
                     setState(() => _isEditing = false);
                   }
                 },

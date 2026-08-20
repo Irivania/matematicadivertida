@@ -38,128 +38,116 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   Widget build(BuildContext context) {
     final gameState = context.watch<GameState>();
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
     final larguraTela = MediaQuery.of(context).size.width;
     final bool eCelular = larguraTela < 768;
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF532287),
         body: Stack(
           children: [
-            // IMAGEM DE FUNDO ORIGINAL RESTAURADA
+            // 1. FUNDO ROXO MÁGICO UNIFICADO (Idêntico ao da Home/Jogo)
             Positioned.fill(
-              child: Image.asset(
-                'assets/images/imagem_fundo_ranking.png',
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF8A49C9), Color(0xFF532287), Color(0xFF221133)],
+                  ),
+                ),
+                child: Stack(
+                  children: List.generate(8, (i) => Positioned(
+                    left: (i * 50.0) % 300, 
+                    top: (i * 80.0) % 600,
+                    child: Icon(Icons.calculate_outlined, color: Colors.white.withOpacity(0.06), size: 60),
+                  )),
+                ),
               ),
             ),
             
-            // Leve camada escura transparente para contraste
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.15))),
-
-            Padding(
-              padding: const EdgeInsets.only(top: 30, left: 16, right: 16, bottom: 16),
-              child: Column(
-                children: [
-                  // Cabeçalho: Botão Sair na esquerda e Estatísticas na DIREITA
-                  Row(
-                    children: [
-                      _buildBotaoSair(context),
-                      const Spacer(),
-                      const Text(
-                        "ESTATÍSTICAS",
-                        style: TextStyle(
-                          color: Colors.black, // TEXTO EM PRETO
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                          shadows: [
-                            Shadow(color: Colors.white, blurRadius: 4),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.black, size: 22),
-                        onPressed: _carregarDados,
-                        tooltip: "Atualizar Estatísticas",
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // TÍTULO "MATEMÁTICA DIVERTIDA" NO TOPO
-                  Text(
-                    "Matemática Divertida",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: eCelular ? 24 : 30,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 1.1,
-                      shadows: [
-                        const Shadow(color: Colors.blueAccent, blurRadius: 6, offset: Offset(0, 2)),
-                        const Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(2, 2)),
-                      ],
-                    ),
-                  ),
-
-                  // Espaçamento ajustado para respeitar a logo/espaço superior da imagem
-                  const SizedBox(height: 140),
-
-                  // ABAS (RANKING DISPUTA / MEU PROGRESSO) CENTRALIZADAS E COM LARGURA LIMITADA
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9), // Fundo sólido e limpo
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                          border: Border.all(color: Colors.black26),
-                        ),
-                        child: TabBar(
-                          indicator: BoxDecoration(
-                            color: AppColors.neonCiano,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          labelColor: Colors.black,
-                          unselectedLabelColor: Colors.black54,
-                          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          tabs: const [
-                            Tab(text: "🏆 RANKING DISPUTA"),
-                            Tab(text: "🎖️ MEU PROGRESSO"),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Conteúdo das Abas
-                  Expanded(
-                    child: TabBarView(
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    // Cabeçalho: Botão Sair na esquerda e Botão Atualizar na direita
+                    Row(
                       children: [
-                        RankingGlobalTab(
-                          futureRanking: _futureRankingGlobal,
-                          onRefresh: _carregarDados,
+                        _buildBotaoSair(context, eIngles),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.refresh, color: Colors.white, size: 24),
+                          onPressed: _carregarDados,
+                          tooltip: eIngles ? "Refresh Statistics" : "Atualizar Estatísticas",
                         ),
-                        MeuProgressoTab(gameState: gameState),
                       ],
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 4),
+
+                    // LOGO OFICIAL NO TOPO (Padrão Home)
+                    Image.asset(
+                      'assets/images/logo_matematica.png', 
+                      height: eCelular ? 130 : 170, 
+                      fit: BoxFit.contain,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // ABAS (RANKING DISPUTA / MEU PROGRESSO) TRADUZIDAS E COM LARGURA LIMITADA
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9), 
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(color: Colors.black26),
+                          ),
+                          child: TabBar(
+                            indicator: BoxDecoration(
+                              color: AppColors.neonCiano,
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            labelColor: Colors.black,
+                            unselectedLabelColor: Colors.black54,
+                            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            tabs: [
+                              Tab(text: eIngles ? "🏆 CHALLENGE" : "🏆 RANKING"),
+                              Tab(text: eIngles ? "🎖️ PROGRESS" : "🎖️ PROGRESSO"),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Conteúdo das Abas
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          RankingGlobalTab(
+                            futureRanking: _futureRankingGlobal,
+                            onRefresh: _carregarDados,
+                          ),
+                          MeuProgressoTab(gameState: gameState),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -168,21 +156,24 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
-  Widget _buildBotaoSair(BuildContext context) => InkWell(
+  Widget _buildBotaoSair(BuildContext context, bool eIngles) => InkWell(
         onTap: () => Navigator.of(context).pop(),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.black, width: 2)
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 12),
-              SizedBox(width: 4),
-              Text("SAIR", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12))
+              const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                eIngles ? "EXIT" : "SAIR", 
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              )
             ],
           ),
         ),

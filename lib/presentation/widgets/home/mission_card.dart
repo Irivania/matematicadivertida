@@ -1,6 +1,7 @@
 // lib/presentation/widgets/home/mission_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:matematicadivertida/l10n/app_localizations.dart';
 import '../../../data/models/game_state.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -10,65 +11,84 @@ class MissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
+    final t = AppLocalizations.of(context)!;
     
-    // Calcula a porcentagem para a barra
-    double progresso = gs.progressoMissaoDiaria / gs.metaMissaoDiaria;
+    double progresso = (gs.progressoMissaoDiaria / gs.metaMissaoDiaria).clamp(0.0, 1.0);
     bool concluida = gs.progressoMissaoDiaria >= gs.metaMissaoDiaria;
 
+    // Lógica para mudar a cor da barra conforme o progresso avança:
+    Color corBarra;
+    if (progresso < 0.5) {
+      corBarra = Color.lerp(Colors.redAccent, AppColors.neonCiano, progresso * 2)!;
+    } else {
+      corBarra = Color.lerp(AppColors.neonCiano, Colors.green.shade600, (progresso - 0.5) * 2)!;
+    }
+
+    if (concluida) {
+      corBarra = Colors.green.shade600;
+    }
+
     return Container(
-      // Brilho e borda se concluída
       decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(16),
-        border: concluida ? Border.all(color: Colors.greenAccent, width: 2) : null,
-        boxShadow: concluida ? [BoxShadow(color: Colors.greenAccent.withOpacity(0.2), blurRadius: 10)] : [],
-      ),
-      child: Card(
-        color: Colors.black.withOpacity(0.6),
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    concluida ? Icons.check_circle : Icons.emoji_events, 
-                    color: concluida ? Colors.greenAccent : Colors.amber
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    concluida ? "MISSÃO CONCLUÍDA! 🎉" : "MISSÃO DIÁRIA 🎯",
-                    style: TextStyle(
-                      color: concluida ? Colors.greenAccent : Colors.white, 
-                      fontWeight: FontWeight.bold
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: progresso.clamp(0.0, 1.0),
-                backgroundColor: Colors.white24,
-                color: concluida ? Colors.greenAccent : AppColors.neonCiano,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                concluida 
-                  ? "Recompensa recebida: +200 XP! Volte amanhã! 📅" 
-                  : "${gs.progressoMissaoDiaria}/${gs.metaMissaoDiaria} questões - Complete para ganhar 200 XP",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: concluida ? Colors.greenAccent : Colors.white70, 
-                  fontSize: 12,
-                  fontWeight: concluida ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
+        border: Border.all(
+          color: concluida ? Colors.green.shade600 : Colors.white.withOpacity(0.8), 
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  concluida ? Icons.check_circle : Icons.emoji_events, 
+                  color: concluida ? Colors.green.shade700 : Colors.amber.shade800,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  concluida ? t.missaoConcluida : t.missaoDiaria,
+                  style: TextStyle(
+                    color: concluida ? Colors.green.shade900 : Colors.black87, 
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: progresso,
+              backgroundColor: Colors.grey.shade300,
+              color: corBarra,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              concluida 
+                ? t.recompensaRecebida
+                : t.progressoQuestao(gs.progressoMissaoDiaria.toString(), gs.metaMissaoDiaria.toString()),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: concluida ? Colors.green.shade800 : Colors.black54, 
+                fontSize: 11.5,
+                fontWeight: concluida ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

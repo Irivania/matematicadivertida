@@ -15,13 +15,17 @@ class NivelScreen extends StatelessWidget {
     final args = ModalRoute.of(context)!.settings.arguments;
     final String perfil = args is String ? args : "Convidado";
 
+    // Verifica o idioma atual para tradução
+    final gameState = context.watch<GameState>();
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
+
     return Scaffold(
       backgroundColor: AppColors.backgroundEscuro,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          "DESAFIO: ${perfil.toUpperCase()}",
+          eIngles ? "CHALLENGE: ${perfil.toUpperCase()}" : "DESAFIO: ${perfil.toUpperCase()}",
           style: const TextStyle(
             color: AppColors.neonCiano,
             fontWeight: FontWeight.bold,
@@ -38,11 +42,11 @@ class NivelScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
               child: Text(
-                "Selecione sua dificuldade:",
-                style: TextStyle(color: Colors.white70, fontSize: 18),
+                eIngles ? "Select your difficulty:" : "Selecione sua dificuldade:",
+                style: const TextStyle(color: Colors.white70, fontSize: 18),
               ),
             ),
             Expanded(
@@ -50,7 +54,7 @@ class NivelScreen extends StatelessWidget {
                 itemCount: Nivel.values.length,
                 itemBuilder: (context, index) {
                   final nivel = Nivel.values[index];
-                  return _buildNivelCard(context, nivel, perfil);
+                  return _buildNivelCard(context, nivel, perfil, eIngles);
                 },
               ),
             ),
@@ -60,11 +64,10 @@ class NivelScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNivelCard(BuildContext context, Nivel nivel, String perfil) {
+  Widget _buildNivelCard(BuildContext context, Nivel nivel, String perfil, bool eIngles) {
     final gameState = context.watch<GameState>();
     final Color corNivel = nivel.cor;
     
-    // CORRIGIDO: Passando 'nivel.name' (String) em vez de '0' (int)
     final String medalha = gameState.obterTipoMedalha(nivel.name); 
 
     IconData iconeNivel = switch (nivel) {
@@ -128,7 +131,7 @@ class NivelScreen extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      "Indicado para: ${nivel.serie}",
+                      eIngles ? "Recommended for: ${nivel.serie}" : "Indicado para: ${nivel.serie}",
                       style: const TextStyle(color: Colors.white38, fontSize: 12),
                     ),
                   ],

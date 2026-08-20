@@ -19,18 +19,25 @@ class AuthController extends ChangeNotifier {
   void _init() {
     _authRepository.onAuthStateChanged.listen((user) {
       _usuarioAtual = user;
+      
+      // Limpa o progresso e perfil anterior ao trocar de conta ou deslogar
+      _progressoAtual = null;
+      _perfilAtivo = null;
+      
       notifyListeners();
     });
   }
 
-  // --- GETTERS NECESSÁRIOS PARA AS TELAS ---
+  // --- GETTERS ---
   UserEntity? get usuarioAtual => _usuarioAtual;
   bool get isLoading => _isLoading;
   bool get estaAutenticado => _usuarioAtual != null;
-  String get nomeJogador => _progressoAtual?.nomeJogador ?? '';
+  
+  // Prioriza sempre o nome da conta atual do Firebase Authentication
+  String get nomeJogador => _usuarioAtual?.nomeExibicao ?? _progressoAtual?.nomeJogador ?? '';
   String? get perfilAtivo => _perfilAtivo;
 
-  // --- MÉTODOS CHAMADOS PELAS TELAS ---
+  // --- MÉTODOS DE AUTENTICAÇÃO ---
 
   Future<void> loginComEmail({
     required String email, 
@@ -126,17 +133,50 @@ class AuthController extends ChangeNotifier {
   Future<void> logout() async {
     await _authRepository.signOut();
     _usuarioAtual = null;
+    _progressoAtual = null;
+    _perfilAtivo = null;
     notifyListeners();
   }
 
+  // --- MÉTODOS DE PERFIL E NOME ---
+  
   Future<void> escolherPerfilParaJogar({required String nome, required String perfilEscolhido}) async {
     _perfilAtivo = perfilEscolhido;
-    _progressoAtual = ProgressoGameModel(
-      nomeJogador: nome, 
-      crianca: ProgressoPerfil(fase: 1, nivel: 1), 
-      adulto: ProgressoPerfil(fase: 1, nivel: 1), 
-      professor: ProgressoPerfil(fase: 1, nivel: 1)
-    );
+    
+    if (_progressoAtual != null) {
+      _progressoAtual = ProgressoGameModel(
+        nomeJogador: nome,
+        crianca: _progressoAtual!.crianca,
+        adulto: _progressoAtual!.adulto,
+        professor: _progressoAtual!.professor,
+      );
+    } else {
+      _progressoAtual = ProgressoGameModel(
+        nomeJogador: nome, 
+        crianca: ProgressoPerfil(fase: 1, nivel: 1), 
+        adulto: ProgressoPerfil(fase: 1, nivel: 1), 
+        professor: ProgressoPerfil(fase: 1, nivel: 1)
+      );
+    }
+    notifyListeners();
+  }
+
+  void atualizarNomeJogador(String novoNome) {
+    if (_progressoAtual != null) {
+      _progressoAtual = ProgressoGameModel(
+        nomeJogador: novoNome,
+        crianca: _progressoAtual!.crianca,
+        adulto: _progressoAtual!.adulto,
+        professor: _progressoAtual!.professor,
+      );
+    } else {
+      _progressoAtual = ProgressoGameModel(
+        nomeJogador: novoNome,
+        crianca: ProgressoPerfil(fase: 1, nivel: 1),
+        adulto: ProgressoPerfil(fase: 1, nivel: 1),
+        professor: ProgressoPerfil(fase: 1, nivel: 1),
+      );
+    }
     notifyListeners();
   }
 

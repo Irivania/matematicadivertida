@@ -12,36 +12,39 @@ class MeuProgressoTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool eIngles = gameState.currentLocale.languageCode == 'en';
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       children: [
-        // Usamos um Center + ConstrainedBox para limitar a largura e evitar que estique de canto a canto
         Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 550),
             child: Column(
               children: [
                 Text(
-                  "Perfil Ativo: ${gameState.perfil.toUpperCase()}", 
+                  eIngles 
+                    ? "Active Profile: ${gameState.perfil.toUpperCase()}" 
+                    : "Perfil Ativo: ${gameState.perfil.toUpperCase()}", 
                   textAlign: TextAlign.center, 
                   style: const TextStyle(color: AppColors.neonCiano, fontSize: 14, fontWeight: FontWeight.bold)
                 ),
                 const SizedBox(height: 12),
                 
-                // Gráfico mais compacto
-                _buildGraficoEvolucaoTempo(),
+                // Gráfico de Evolução
+                _buildGraficoEvolucaoTempo(eIngles),
                 const SizedBox(height: 16),
                 
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "Medalhas por Nível", 
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)
+                    eIngles ? "Medals by Level" : "Medalhas por Nível", 
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)
                   ),
                 ),
                 const SizedBox(height: 8),
                 
-                // Lista de cards de progresso dos níveis mais curtos
+                // Lista de cards de progresso
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -54,6 +57,7 @@ class MeuProgressoTab extends StatelessWidget {
                         nivel, 
                         gameState.obterTipoMedalha(nivel.name), 
                         gameState.obterTempoTotalNivel(nivel.name),
+                        eIngles,
                       ),
                     );
                   },
@@ -66,7 +70,7 @@ class MeuProgressoTab extends StatelessWidget {
     );
   }
 
-  Widget _buildGraficoEvolucaoTempo() {
+  Widget _buildGraficoEvolucaoTempo(bool eIngles) {
     List<FlSpot> pontos = [];
     double maiorTempo = 10.0;
     for (int i = 1; i <= 10; i++) {
@@ -76,10 +80,10 @@ class MeuProgressoTab extends StatelessWidget {
     }
 
     return Container(
-      height: 180, // Altura reduzida para ficar mais compacto
+      height: 180,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95), // Fundo claro sólido igual aos cards
+        color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
         border: Border.all(color: Colors.black26),
@@ -87,9 +91,9 @@ class MeuProgressoTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "📈 Curva de Desempenho (Tempo por Fase)", 
-            style: TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)
+          Text(
+            eIngles ? "📈 Performance Curve (Time per Phase)" : "📈 Curva de Desempenho (Tempo por Fase)", 
+            style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -123,27 +127,61 @@ class MeuProgressoTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCardProgressoNivel(Nivel nivel, String medalha, int tempoSegundos) {
+  // Cores atrativas exclusivas para cada nível
+  Color _obterCorDoNivel(Nivel nivel) {
+    switch (nivel) {
+      case Nivel.bronze:
+        return const Color(0xFFD77A33); // Tom de Cobre/Bronze vibrante
+      case Nivel.prata:
+        return const Color(0xFF78909C); // Cinza Prateado metálico
+      case Nivel.ouro:
+        return const Color(0xFFD4AF37); // Amarelo Ouro brilhante
+      case Nivel.platina:
+        return const Color(0xFF00ACC1); // Azul Ciano Platina
+      case Nivel.mestre:
+        return const Color(0xFF8E24AA); // Roxo Mestre forte
+    }
+  }
+
+  Widget _buildCardProgressoNivel(Nivel nivel, String medalha, int tempoSegundos, bool eIngles) {
     bool conquistada = medalha.isNotEmpty;
-    String textoTempo = "⏱️ Tempo Total: --";
+    final Color corNivel = _obterCorDoNivel(nivel);
+
+    String textoTempo = eIngles ? "⏱️ Total Time: --" : "⏱️ Tempo Total: --";
     if (tempoSegundos > 0) {
       int min = tempoSegundos ~/ 60;
       int seg = tempoSegundos % 60;
-      textoTempo = min > 0 ? "⏱️ Tempo Total: $min min ${seg > 0 ? '$seg s' : ''}" : "⏱️ Tempo Total: $seg s";
+      textoTempo = min > 0 
+          ? (eIngles ? "⏱️ Total Time: $min min ${seg > 0 ? '$seg s' : ''}" : "⏱️ Tempo Total: $min min ${seg > 0 ? '$seg s' : ''}")
+          : (eIngles ? "⏱️ Total Time: $seg s" : "⏱️ Tempo Total: $seg s");
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), // Padding interno reduzido
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95), // Fundo branco sólido
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 3, offset: const Offset(0, 1))],
-        border: Border.all(color: conquistada ? Colors.amber.shade700 : Colors.black26, width: conquistada ? 1.8 : 1.0),
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: corNivel.withOpacity(0.2), 
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: corNivel, width: conquistada ? 2.2 : 1.5),
       ),
       child: Row(
         children: [
-          Icon(nivel.icone, color: conquistada ? Colors.amber.shade700 : Colors.black45, size: 28),
-          const SizedBox(width: 12),
+          // Ícone estilizado com fundo e cor temática do nível
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: corNivel.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(nivel.icone, color: corNivel, size: 28),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, 
@@ -151,13 +189,16 @@ class MeuProgressoTab extends StatelessWidget {
               children: [
                 Text(
                   nivel.name.toUpperCase(), 
-                  style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold)
+                  style: TextStyle(color: corNivel, fontSize: 14, fontWeight: FontWeight.w900)
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
-                  conquistada ? "Conquista: $medalha" : "Status: Não Concluído", 
+                  conquistada 
+                      ? (eIngles ? "Achievement: $medalha" : "Conquista: $medalha") 
+                      : (eIngles ? "Status: Not Completed" : "Status: Não Concluído"), 
                   style: TextStyle(color: conquistada ? Colors.green.shade700 : Colors.black54, fontSize: 11, fontWeight: FontWeight.bold)
                 ),
+                const SizedBox(height: 1),
                 Text(
                   textoTempo, 
                   style: const TextStyle(color: Colors.black87, fontSize: 10)

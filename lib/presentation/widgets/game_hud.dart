@@ -1,6 +1,8 @@
+// lib/presentation/widgets/jogo/game_hud.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:matematicadivertida/data/models/game_state.dart';
-import 'package:matematicadivertida/core/enums/nivel_ext.dart'; // Importante para as extensões do Enum
+import 'package:matematicadivertida/core/enums/nivel_ext.dart';
 import 'package:matematicadivertida/core/theme/app_colors.dart';
 
 class GameHud extends StatelessWidget {
@@ -10,7 +12,10 @@ class GameHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CORREÇÃO: Acessamos 'nivelAtual' (o Enum) para usar as extensões .label e .serie
+    // Escuta o idioma atual para tradução dinâmica
+    final gs = context.watch<GameState>();
+    final bool eIngles = gs.currentLocale.languageCode == 'en';
+    
     final nivelEnum = state.nivelAtual;
 
     return Card(
@@ -25,9 +30,9 @@ class GameHud extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // FASE
+            // FASE TRADUZIDA
             Text(
-              "🏆 FASE ${state.fase}",
+              eIngles ? "🏆 PHASE ${state.fase}" : "🏆 FASE ${state.fase}",
               style: const TextStyle(
                 color: AppColors.neonAmarelo,
                 fontSize: 22,
@@ -38,13 +43,18 @@ class GameHud extends StatelessWidget {
 
             const Divider(color: Colors.white24, height: 20),
 
-            // PROGRESSO E ACERTOS
+            // PROGRESSO E ACERTOS TRADUZIDOS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Ajustado para mostrar o número atual da pergunta
-                _buildInfoItem("📘 Questão", "${state.perguntaAtual}/10"),
-                _buildInfoItem("✅ Acertos", "${state.acertos}"),
+                _buildInfoItem(
+                  eIngles ? "📘 Question" : "📘 Questão", 
+                  "${state.perguntaAtual}/10"
+                ),
+                _buildInfoItem(
+                  eIngles ? "✅ Correct" : "✅ Acertos", 
+                  "${state.acertos}"
+                ),
               ],
             ),
 
@@ -76,7 +86,6 @@ class GameHud extends StatelessWidget {
                 const Icon(Icons.school, color: Colors.white60, size: 16),
                 const SizedBox(width: 5),
                 Text(
-                  // CORREÇÃO: Usamos .label (ou .name) e .serie definidos na extensão do Enum
                   "${nivelEnum.label} • ${nivelEnum.serie}", 
                   style: const TextStyle(
                     fontSize: 13,

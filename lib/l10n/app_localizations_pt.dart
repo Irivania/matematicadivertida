@@ -29,5 +29,32 @@ class AppLocalizationsPt extends AppLocalizations {
   String get missaoDiaria => 'MISSÃO DIÁRIA 🎯';
 
   @override
-  String get progressoQuestao => 'questões - Complete para ganhar 200 XP';
+  String get missaoConcluida => 'MISSÃO CONCLUÍDA! 🎉';
+
+  @override
+  String get recompensaRecebida =>
+      'Recompensa recebida: +200 XP! Volte amanhã! 📅';
+
+  @override
+  String progressoQuestao(Object atual, Object meta) {
+    return '$atual/$meta questões - Complete para ganhar 200 XP';
+  }
+
+  @override
+  String get perguntaLabel => 'Pergunta';
+
+  @override
+  String get deLabel => 'de';
+
+  @override
+  String get botaoContinuar => 'CONTINUAR';
+
+  @override
+  String get botaoEntendi => 'ENTENDI';
+
+  @override
+  String get continuarPartida => 'Continuar Partida';
+
+  @override
+  String get botaoComecar => 'COMEÇAR';
 }
