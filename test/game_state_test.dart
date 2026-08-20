@@ -27,5 +27,15 @@ void main() {
       
       expect(textoNormalizado.contains("mundo 123"), isTrue);
     });
+
+    // --- NOVO TESTE ADICIONADO AQUI ---
+    test('Deve retornar string vazia ou status correto para medalhas quando o nível não for concluído', () {
+      final gameState = GameState();
+
+      // Um nível que o usuário nunca jogou não deve ter medalha registrada inicialmente
+      String medalhaNivelInexistente = gameState.obterTipoMedalha('nivel_fantasma');
+      
+      expect(medalhaNivelInexistente, isEmpty);
+    });
   });
 }
