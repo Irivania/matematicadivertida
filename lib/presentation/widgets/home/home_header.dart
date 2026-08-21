@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../controllers/auth_controller.dart';
+import '../../../l10n/app_localizations.dart'; // Importação das traduções
 
 class HomeHeader extends StatefulWidget {
   const HomeHeader({super.key});
@@ -18,16 +19,17 @@ class _HomeHeaderState extends State<HomeHeader> {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
+    final t = AppLocalizations.of(context)!; // Obtém as instâncias de tradução
     String nomeExibicao = authController.nomeJogador;
 
     if (_isEditing) {
-      return _buildEditMode(authController, nomeExibicao);
+      return _buildEditMode(authController, nomeExibicao, t);
     }
 
-    return _buildViewMode(nomeExibicao);
+    return _buildViewMode(nomeExibicao, t);
   }
 
-  Widget _buildViewMode(String nome) {
+  Widget _buildViewMode(String nome, AppLocalizations t) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -50,7 +52,7 @@ class _HomeHeaderState extends State<HomeHeader> {
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              "OLÁ, ${nome.toUpperCase()}!",
+              t.boasVindas(nome.toUpperCase()), // Chamada correta da função gerada pelo l10n com parâmetro
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.black87,
@@ -80,7 +82,7 @@ class _HomeHeaderState extends State<HomeHeader> {
     );
   }
 
-  Widget _buildEditMode(AuthController authController, String nomeAtual) {
+  Widget _buildEditMode(AuthController authController, String nomeAtual, AppLocalizations t) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -118,9 +120,7 @@ class _HomeHeaderState extends State<HomeHeader> {
                 onPressed: () {
                   final novoNome = _nomeController.text.trim();
                   if (novoNome.isNotEmpty) {
-                    // CHAMADA CORRETA DO MÉTODO QUE CRIAMOS NO AUTHCONTROLLER
                     authController.atualizarNomeJogador(novoNome);
-                    
                     setState(() => _isEditing = false);
                   }
                 },
